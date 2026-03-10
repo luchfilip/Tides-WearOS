@@ -1,0 +1,40 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Module build dirs
+app/build/
+core/build/
+feature-auth/build/
+feature-player/build/
+feature-library/build/
+feature-offline/build/
+feature-settings/build/
+
+# Logs
+logs/
+
+# Secrets
+gradle.properties
+
+# Project management / AI
+.gira/
+.claude/
+.omc/
+CLAUDE.md
+GEMINI.md
+AGENTS.md
+
+# Captured traffic
+*.chls
+*.mp4
+
+# Old git history
+.git-old/

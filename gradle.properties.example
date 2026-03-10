@@ -1,0 +1,10 @@
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+android.useAndroidX=true
+kotlin.code.style=official
+android.nonTransitiveRClass=true
+
+# Tidal API — obtain from Tidal developer portal or reverse-engineer from official app
+TIDAL_CLIENT_ID=YOUR_CLIENT_ID
+TIDAL_CLIENT_SECRET=YOUR_CLIENT_SECRET
+TIDAL_API_BASE_URL=https://api.tidal.com/
+TIDAL_AUTH_BASE_URL=https://auth.tidal.com/v1/
