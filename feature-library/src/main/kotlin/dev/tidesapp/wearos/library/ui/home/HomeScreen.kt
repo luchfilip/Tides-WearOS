@@ -122,30 +122,11 @@ private fun HomeList(
         feedSections.forEach { section ->
             if (section.title.isNotBlank()) {
                 item {
-                    val viewAllPath = section.viewAllPath
-                    if (viewAllPath != null) {
-                        // Dense tappable section header — doubles as the "See all" affordance
-                        // so we don't have to burn an extra chip row per section on-wrist.
-                        TidesChip(
-                            label = section.title,
-                            secondaryLabel = "See all",
-                            onClick = {
-                                onEvent(
-                                    HomeUiEvent.SectionSeeAllClicked(
-                                        viewAllPath = viewAllPath,
-                                        sectionTitle = section.title,
-                                    ),
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    } else {
-                        Text(
-                            text = section.title,
-                            style = MaterialTheme.typography.title3,
-                            color = MaterialTheme.colors.primary,
-                        )
-                    }
+                    Text(
+                        text = section.title,
+                        style = MaterialTheme.typography.title3,
+                        color = MaterialTheme.colors.primary,
+                    )
                 }
             }
             items(section.items.size) { index ->
@@ -160,6 +141,23 @@ private fun HomeList(
                     onClick = { onEvent(HomeUiEvent.FeedItemClicked(item)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
+            }
+            val viewAllPath = section.viewAllPath
+            if (viewAllPath != null) {
+                item {
+                    TidesChip(
+                        label = "See all",
+                        onClick = {
+                            onEvent(
+                                HomeUiEvent.SectionSeeAllClicked(
+                                    viewAllPath = viewAllPath,
+                                    sectionTitle = section.title,
+                                ),
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
 
