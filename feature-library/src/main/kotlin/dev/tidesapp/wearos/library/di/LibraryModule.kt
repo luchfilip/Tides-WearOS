@@ -1,5 +1,6 @@
 package dev.tidesapp.wearos.library.di
 
+import dev.tidesapp.wearos.library.data.api.ProbeApi
 import dev.tidesapp.wearos.library.data.api.TidesLibraryApi
 import dev.tidesapp.wearos.library.data.repository.AlbumRepositoryImpl
 import dev.tidesapp.wearos.library.data.repository.HomeRepositoryImpl
@@ -38,6 +39,13 @@ abstract class LibraryRepositoryModule {
         @Singleton
         fun provideTidesLibraryApi(retrofit: Retrofit): TidesLibraryApi {
             return retrofit.create(TidesLibraryApi::class.java)
+        }
+
+        // THROWAWAY: delete in TIDES-M2E after home v2 migration completes.
+        @Provides
+        @Singleton
+        fun provideProbeApi(retrofit: Retrofit): ProbeApi {
+            return retrofit.create(ProbeApi::class.java)
         }
     }
 }

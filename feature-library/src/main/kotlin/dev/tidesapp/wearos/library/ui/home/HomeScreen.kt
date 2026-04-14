@@ -18,6 +18,7 @@ import dev.tidesapp.wearos.core.domain.model.HomeFeedSection
 import dev.tidesapp.wearos.core.ui.components.ErrorScreen
 import dev.tidesapp.wearos.core.ui.components.LoadingScreen
 import dev.tidesapp.wearos.core.ui.components.TidesChip
+import dev.tidesapp.wearos.library.BuildConfig
 import kotlinx.collections.immutable.ImmutableList
 
 @Composable
@@ -46,6 +47,20 @@ fun HomeScreen(
             when (effect) {
                 is HomeUiEffect.NavigateToAlbum -> onNavigateToAlbum(effect.albumId)
                 is HomeUiEffect.NavigateToPlaylist -> onNavigateToPlaylist(effect.playlistId)
+                is HomeUiEffect.DebugProbeResult -> {
+                    // THROWAWAY: delete in TIDES-M2E. Release builds never fire
+                    // DebugProbeRequested, so this branch is dead code on release.
+                    if (BuildConfig.DEBUG) {
+                        effect.results.forEach { result ->
+                            android.util.Log.d(
+                                "TidesProbe",
+                                "endpoint=${result.endpoint} status=${result.status} " +
+                                    "error=${result.error} headers=${result.tidalHeaders} " +
+                                    "body=${result.bodyPreview}",
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -166,6 +181,19 @@ private fun HomeList(
                 onClick = onNavigateToSettings,
                 modifier = Modifier.fillMaxWidth(),
             )
+        }
+
+        // THROWAWAY: delete in TIDES-M2E after home v2 migration completes.
+        // R8 dead-code-eliminates this chip in release because BuildConfig.DEBUG is a
+        // compile-time constant `false` in release builds.
+        if (BuildConfig.DEBUG) {
+            item {
+                TidesChip(
+                    label = "Run v2 Probe",
+                    onClick = { onEvent(HomeUiEvent.DebugProbeRequested()) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
     }
 }
