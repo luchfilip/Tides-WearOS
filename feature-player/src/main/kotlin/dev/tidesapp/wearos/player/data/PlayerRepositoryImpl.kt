@@ -8,8 +8,6 @@ import dev.tidesapp.wearos.player.domain.repository.PlayerState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -20,7 +18,6 @@ class PlayerRepositoryImpl @Inject constructor() : PlayerRepository {
     override val playerState: StateFlow<PlayerState> = _playerState.asStateFlow()
 
     private var player: Player? = null
-    private val _playerAvailable = MutableStateFlow<Player?>(null)
 
     private val playerListener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -46,19 +43,7 @@ class PlayerRepositoryImpl @Inject constructor() : PlayerRepository {
         this.player?.removeListener(playerListener)
         this.player = player
         player.addListener(playerListener)
-        _playerAvailable.value = player
         updateState()
-    }
-
-    fun clearPlayer() {
-        player?.removeListener(playerListener)
-        player = null
-        _playerAvailable.value = null
-        _playerState.value = PlayerState()
-    }
-
-    suspend fun awaitPlayer(): Player {
-        return _playerAvailable.filterNotNull().first()
     }
 
     override fun playPause() {

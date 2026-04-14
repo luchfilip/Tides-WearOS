@@ -8,26 +8,14 @@ import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import dev.tidesapp.wearos.player.R
-import dev.tidesapp.wearos.player.data.PlayerRepositoryImpl
 import dev.tidesapp.wearos.player.playback.MusicServiceController
-import dagger.hilt.EntryPoint
-import dagger.hilt.InstallIn
-import dagger.hilt.android.EntryPointAccessors
-import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 
-@EntryPoint
-@InstallIn(SingletonComponent::class)
-interface WearMusicServiceEntryPoint {
-    fun playerRepository(): PlayerRepositoryImpl
-}
-
 class WearMusicService : MediaSessionService() {
 
-    private lateinit var playerRepository: PlayerRepositoryImpl
     private var mediaSession: MediaSession? = null
     private var player: ExoPlayer? = null
     private lateinit var serviceController: MusicServiceController
@@ -35,12 +23,6 @@ class WearMusicService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
-
-        val entryPoint = EntryPointAccessors.fromApplication(
-            applicationContext,
-            WearMusicServiceEntryPoint::class.java,
-        )
-        playerRepository = entryPoint.playerRepository()
 
         val exoPlayer = ExoPlayer.Builder(this)
             .setAudioAttributes(
@@ -54,7 +36,6 @@ class WearMusicService : MediaSessionService() {
             .build()
 
         player = exoPlayer
-        playerRepository.setPlayer(exoPlayer)
 
         mediaSession = MediaSession.Builder(this, exoPlayer).build()
 
@@ -86,7 +67,6 @@ class WearMusicService : MediaSessionService() {
             release()
         }
         mediaSession = null
-        playerRepository.clearPlayer()
         player = null
         serviceScope.cancel()
         super.onDestroy()
