@@ -15,7 +15,7 @@ class TidesHeaderInterceptorTest {
     private val interceptor = TidesHeaderInterceptor(clientVersion)
 
     @Test
-    fun `intercept adds UA, client version, and Accept-Encoding headers`() {
+    fun `intercept adds UA and client version headers`() {
         val chain = StubChain(
             Request.Builder()
                 .url("https://api.tidal.com/v2/home/feed/STATIC")
@@ -27,7 +27,23 @@ class TidesHeaderInterceptorTest {
         val sent = chain.lastRequest()
         assertEquals("TIDAL_ANDROID_TV/2.187.0 null", sent.header("User-Agent"))
         assertEquals("2.187.0", sent.header("x-tidal-client-version"))
-        assertEquals("gzip", sent.header("Accept-Encoding"))
+    }
+
+    @Test
+    fun `intercept does not set Accept-Encoding so OkHttp can auto-decompress`() {
+        // Setting Accept-Encoding manually disables OkHttp's transparent gzip
+        // decompression, which leaves the response body as raw gzipped bytes
+        // and breaks JSON parsing. We must NOT set this header here.
+        val chain = StubChain(
+            Request.Builder()
+                .url("https://api.tidal.com/v2/home/feed/STATIC")
+                .build()
+        )
+
+        interceptor.intercept(chain)
+
+        val sent = chain.lastRequest()
+        assertEquals(null, sent.header("Accept-Encoding"))
     }
 
     @Test
@@ -64,7 +80,6 @@ class TidesHeaderInterceptorTest {
 
         assertEquals(1, afterSecond.headers("User-Agent").size)
         assertEquals(1, afterSecond.headers("x-tidal-client-version").size)
-        assertEquals(1, afterSecond.headers("Accept-Encoding").size)
         assertEquals("TIDAL_ANDROID_TV/2.187.0 null", afterSecond.header("User-Agent"))
     }
 
