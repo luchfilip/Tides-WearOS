@@ -1,8 +1,10 @@
 package dev.tidesapp.wearos.player.di
 
+import dev.tidesapp.wearos.core.domain.playback.PlaybackControl
 import dev.tidesapp.wearos.player.data.PlayerRepositoryImpl
 import dev.tidesapp.wearos.player.data.api.TidesPlaybackApi
 import dev.tidesapp.wearos.player.domain.repository.PlayerRepository
+import dev.tidesapp.wearos.player.playback.PlaybackController
 import dev.tidesapp.wearos.player.playback.StreamingPrivilegeSource
 import dagger.Binds
 import dagger.Module
@@ -18,6 +20,9 @@ abstract class PlayerBindingsModule {
 
     @Binds
     abstract fun bindPlayerRepository(impl: PlayerRepositoryImpl): PlayerRepository
+
+    @Binds
+    abstract fun bindPlaybackControl(impl: PlaybackController): PlaybackControl
 }
 
 @Module

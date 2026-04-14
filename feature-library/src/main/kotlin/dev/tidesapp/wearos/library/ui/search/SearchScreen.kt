@@ -39,7 +39,7 @@ import kotlinx.collections.immutable.ImmutableList
 fun SearchScreen(
     onNavigateToAlbumDetail: (String) -> Unit,
     onNavigateToPlaylistDetail: (String) -> Unit,
-    onNavigateToNowPlaying: (String) -> Unit,
+    onNavigateToNowPlaying: () -> Unit,
     viewModel: SearchViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -58,8 +58,7 @@ fun SearchScreen(
                 is SearchUiEffect.NavigateToPlaylistDetail ->
                     onNavigateToPlaylistDetail(effect.playlistId)
 
-                is SearchUiEffect.NavigateToNowPlaying ->
-                    onNavigateToNowPlaying(effect.trackId)
+                SearchUiEffect.NavigateToNowPlaying -> onNavigateToNowPlaying()
 
                 is SearchUiEffect.ShowError -> { /* handled by snackbar in real app */ }
             }
@@ -151,7 +150,7 @@ fun SearchContent(
                             onClick = {
                                 onEvent(
                                     SearchUiEvent.ResultClicked(
-                                        SearchResultType.Track(result.tracks[index].id)
+                                        SearchResultType.Track(result.tracks[index])
                                     )
                                 )
                             },

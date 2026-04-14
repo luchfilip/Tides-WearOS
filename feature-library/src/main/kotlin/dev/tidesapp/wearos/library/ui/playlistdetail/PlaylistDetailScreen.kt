@@ -25,7 +25,7 @@ import kotlinx.collections.immutable.ImmutableList
 @Composable
 fun PlaylistDetailScreen(
     playlistId: String,
-    onNavigateToNowPlaying: (String) -> Unit,
+    onNavigateToNowPlaying: () -> Unit,
     viewModel: PlaylistDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -38,9 +38,7 @@ fun PlaylistDetailScreen(
     LaunchedEffect(Unit) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
-                is PlaylistDetailUiEffect.NavigateToNowPlaying ->
-                    onNavigateToNowPlaying(effect.trackId)
-
+                PlaylistDetailUiEffect.NavigateToNowPlaying -> onNavigateToNowPlaying()
                 is PlaylistDetailUiEffect.ShowError -> { /* handled by snackbar in real app */ }
             }
         }

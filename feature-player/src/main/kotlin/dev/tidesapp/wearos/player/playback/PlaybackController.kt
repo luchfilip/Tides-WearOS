@@ -3,26 +3,21 @@ package dev.tidesapp.wearos.player.playback
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
-import android.util.Base64
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
-import com.tidal.sdk.auth.CredentialsProvider
-import dev.tidesapp.wearos.core.di.IoDispatcher
-import dev.tidesapp.wearos.player.data.PlayerRepositoryImpl
-import dev.tidesapp.wearos.player.data.api.TidesPlaybackApi
-import dev.tidesapp.wearos.player.data.dto.BtsManifest
-import dev.tidesapp.wearos.player.service.WearMusicService
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineDispatcher
+import dev.tidesapp.wearos.core.domain.model.TrackItem
+import dev.tidesapp.wearos.core.domain.playback.PlaybackControl
+import dev.tidesapp.wearos.player.data.PlayerRepositoryImpl
+import dev.tidesapp.wearos.player.service.WearMusicService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -30,79 +25,50 @@ import kotlin.coroutines.resumeWithException
 
 @Singleton
 class PlaybackController @Inject constructor(
-    private val playbackApi: TidesPlaybackApi,
-    private val credentialsProvider: CredentialsProvider,
     private val playerRepository: PlayerRepositoryImpl,
     @ApplicationContext private val context: Context,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-) {
-    private val json = Json { ignoreUnknownKeys = true }
+) : PlaybackControl {
 
     @Volatile
     private var mediaController: MediaController? = null
     private val controllerMutex = Mutex()
 
-    suspend fun playTrack(trackId: String) {
-        val mediaItem = withContext(ioDispatcher) {
-            val token = getBearerToken()
-
-            val playbackInfo = playbackApi.getTrackPlaybackInfo(token, trackId)
-            val trackDetail = try {
-                playbackApi.getTrack(token, trackId)
-            } catch (_: Exception) {
-                null
-            }
-
-            val artworkUri = trackDetail?.album?.cover?.let { cover ->
-                val path = cover.replace("-", "/")
-                Uri.parse("https://resources.tidal.com/images/$path/320x320.jpg")
-            }
-
-            val isDash = playbackInfo.manifestMimeType.contains("dash", ignoreCase = true)
-
-            val mediaItemBuilder = MediaItem.Builder()
-                .setMediaId(trackId)
-                .setMediaMetadata(
-                    MediaMetadata.Builder()
-                        .setTitle(trackDetail?.title ?: "Track $trackId")
-                        .setArtist(
-                            trackDetail?.artist?.name
-                                ?: trackDetail?.artists?.firstOrNull()?.name
-                                ?: "",
-                        )
-                        .setAlbumTitle(trackDetail?.album?.title ?: "")
-                        .setArtworkUri(artworkUri)
-                        .build(),
-                )
-
-            if (isDash) {
-                // DASH: pass raw base64 MPD via data URI, ExoPlayer parses it for CDN segment URLs
-                mediaItemBuilder
-                    .setUri("data:application/dash+xml;base64,${playbackInfo.manifest}")
-                    .setMimeType("application/dash+xml")
-            } else {
-                // BTS/EMU: manifest JSON contains direct audio URLs
-                val audioUrl = decodeManifest(playbackInfo.manifest, playbackInfo.manifestMimeType)
-                mediaItemBuilder.setUri(audioUrl)
-            }
-
-            mediaItemBuilder.build()
-        }
-
+    override suspend fun playTracks(
+        tracks: List<TrackItem>,
+        startIndex: Int,
+    ): Result<Unit> = runCatching {
+        require(tracks.isNotEmpty()) { "playTracks called with empty list" }
+        val (mediaItems, safeIndex) = buildStubMediaItems(tracks, startIndex)
         withContext(Dispatchers.Main) {
             val controller = ensureController()
-            controller.setMediaItem(mediaItem)
+            controller.setMediaItems(mediaItems, safeIndex, 0L)
             controller.prepare()
             controller.play()
         }
     }
 
     /**
+     * Pure builder for the stub [MediaItem] queue. Extracted so it can be
+     * unit-tested without instantiating a real [MediaController] (which in
+     * turn requires a running [WearMusicService] + [SessionToken]).
+     */
+    internal fun buildStubMediaItems(
+        tracks: List<TrackItem>,
+        startIndex: Int,
+    ): Pair<List<MediaItem>, Int> {
+        require(tracks.isNotEmpty()) { "buildStubMediaItems called with empty list" }
+        val safeIndex = startIndex.coerceIn(0, tracks.lastIndex)
+        val mediaItems = tracks.map { it.toStubMediaItem() }
+        return mediaItems to safeIndex
+    }
+
+    /**
      * Returns the cached [MediaController], building it lazily on first call.
      *
-     * Binding a [MediaController] to the [WearMusicService] session is what causes Media3 to
-     * promote the service to foreground and invoke the notification provider. Must be called
-     * from the main thread — Media3 requires [MediaController.Builder] to be used there.
+     * Binding a [MediaController] to the [WearMusicService] session is what
+     * causes Media3 to promote the service to foreground and invoke the
+     * notification provider. Must be called from the main thread — Media3
+     * requires [MediaController.Builder] to be used there.
      */
     internal suspend fun ensureController(): MediaController {
         mediaController?.let { return it }
@@ -134,31 +100,36 @@ class PlaybackController @Inject constructor(
             )
             cont.invokeOnCancellation { future.cancel(true) }
         }
+}
 
-    private suspend fun getBearerToken(): String {
-        val result = credentialsProvider.getCredentials(null)
-        val token = result.successData?.token
-            ?: throw RuntimeException("Failed to obtain credentials")
-        return "Bearer $token"
-    }
+/**
+ * Build a URI-less [MediaItem] carrying only the track id + display metadata.
+ * The service-side [androidx.media3.session.MediaSession.Callback.onAddMediaItems]
+ * hook is responsible for resolving the playback URI just-in-time.
+ */
+internal fun TrackItem.toStubMediaItem(): MediaItem =
+    MediaItem.Builder()
+        .setMediaId(id)
+        .setMediaMetadata(
+            MediaMetadata.Builder()
+                .setTitle(title)
+                .setArtist(artistName)
+                .setAlbumTitle(albumTitle)
+                .setArtworkUri(tidalArtworkUri(imageUrl))
+                .build(),
+        )
+        .build()
 
-    private fun decodeManifest(manifest: String, mimeType: String): String {
-        val decoded = String(Base64.decode(manifest, Base64.DEFAULT))
-        return when {
-            mimeType.contains("bts", ignoreCase = true) ||
-                mimeType.contains("emu", ignoreCase = true) -> {
-                val bts = json.decodeFromString<BtsManifest>(decoded)
-                bts.urls.firstOrNull()
-                    ?: throw RuntimeException("No audio URL in manifest")
-            }
-            else -> {
-                try {
-                    val bts = json.decodeFromString<BtsManifest>(decoded)
-                    bts.urls.firstOrNull() ?: decoded
-                } catch (_: Exception) {
-                    decoded
-                }
-            }
-        }
+/**
+ * Compose a TIDAL `resources.tidal.com` CDN URL from the cover id contained
+ * in [imageUrl]. Accepts either a full https URL (passed through) or a bare
+ * `uuid` / `uuid-with-dashes` cover id (rewritten into the 320x320 asset).
+ */
+private fun tidalArtworkUri(imageUrl: String?): Uri? {
+    if (imageUrl.isNullOrBlank()) return null
+    if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+        return Uri.parse(imageUrl)
     }
+    val path = imageUrl.replace("-", "/")
+    return Uri.parse("https://resources.tidal.com/images/$path/320x320.jpg")
 }

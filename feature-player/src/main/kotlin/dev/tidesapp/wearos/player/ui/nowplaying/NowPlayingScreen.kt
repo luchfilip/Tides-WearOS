@@ -31,16 +31,9 @@ import dev.tidesapp.wearos.player.R
 @Composable
 fun NowPlayingScreen(
     onNavigateBack: () -> Unit,
-    trackId: String? = null,
     viewModel: NowPlayingViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    LaunchedEffect(trackId) {
-        if (trackId != null) {
-            viewModel.onEvent(NowPlayingUiEvent.PlayTrack(trackId))
-        }
-    }
 
     LaunchedEffect(Unit) {
         viewModel.onEvent(NowPlayingUiEvent.ObservePlayerState)

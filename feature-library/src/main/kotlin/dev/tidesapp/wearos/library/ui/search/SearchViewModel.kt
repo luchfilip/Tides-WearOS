@@ -4,6 +4,8 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.tidesapp.wearos.core.domain.model.SearchResult
+import dev.tidesapp.wearos.core.domain.model.TrackItem
+import dev.tidesapp.wearos.core.domain.playback.PlaybackControl
 import dev.tidesapp.wearos.library.domain.repository.SearchRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -26,7 +28,7 @@ sealed interface SearchUiState {
 sealed class SearchResultType {
     data class Album(val albumId: String) : SearchResultType()
     data class Playlist(val playlistId: String) : SearchResultType()
-    data class Track(val trackId: String) : SearchResultType()
+    data class Track(val track: TrackItem) : SearchResultType()
     data class Artist(val artistId: String) : SearchResultType()
 }
 
@@ -41,13 +43,14 @@ sealed interface SearchUiEvent {
 sealed interface SearchUiEffect {
     data class NavigateToAlbumDetail(val albumId: String) : SearchUiEffect
     data class NavigateToPlaylistDetail(val playlistId: String) : SearchUiEffect
-    data class NavigateToNowPlaying(val trackId: String) : SearchUiEffect
+    data object NavigateToNowPlaying : SearchUiEffect
     data class ShowError(val message: String) : SearchUiEffect
 }
 
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val searchRepository: SearchRepository,
+    private val playbackControl: PlaybackControl,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<SearchUiState>(SearchUiState.Initial)
@@ -101,7 +104,15 @@ class SearchViewModel @Inject constructor(
                     _uiEffect.send(SearchUiEffect.NavigateToPlaylistDetail(resultType.playlistId))
 
                 is SearchResultType.Track ->
-                    _uiEffect.send(SearchUiEffect.NavigateToNowPlaying(resultType.trackId))
+                    playbackControl.playTracks(listOf(resultType.track), startIndex = 0)
+                        .onSuccess { _uiEffect.send(SearchUiEffect.NavigateToNowPlaying) }
+                        .onFailure { error ->
+                            _uiEffect.send(
+                                SearchUiEffect.ShowError(
+                                    error.message ?: "Failed to start playback",
+                                ),
+                            )
+                        }
 
                 is SearchResultType.Artist -> { /* TODO: Navigate to artist detail */ }
             }

@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import dev.tidesapp.wearos.core.domain.model.PlaylistItem
 import dev.tidesapp.wearos.core.domain.model.TrackItem
+import dev.tidesapp.wearos.core.domain.playback.PlaybackControl
 import dev.tidesapp.wearos.library.domain.repository.PlaylistRepository
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -24,6 +25,7 @@ import org.junit.Test
 class PlaylistDetailViewModelTest {
 
     private lateinit var repository: PlaylistRepository
+    private lateinit var playbackControl: PlaybackControl
     private lateinit var viewModel: PlaylistDetailViewModel
     private val testDispatcher = StandardTestDispatcher()
 
@@ -31,6 +33,9 @@ class PlaylistDetailViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         repository = mockk()
+        playbackControl = mockk {
+            coEvery { playTracks(any(), any()) } returns Result.success(Unit)
+        }
     }
 
     @After
@@ -40,7 +45,7 @@ class PlaylistDetailViewModelTest {
 
     @Test
     fun `initial state is Initial`() {
-        viewModel = PlaylistDetailViewModel(repository, SavedStateHandle())
+        viewModel = PlaylistDetailViewModel(repository, playbackControl, SavedStateHandle())
         assertEquals(PlaylistDetailUiState.Initial, viewModel.uiState.value)
     }
 
@@ -51,7 +56,7 @@ class PlaylistDetailViewModelTest {
         coEvery { repository.getUserPlaylists(false) } returns Result.success(playlists)
         coEvery { repository.getPlaylistTracks("playlist-1") } returns Result.success(tracks)
 
-        viewModel = PlaylistDetailViewModel(repository, SavedStateHandle())
+        viewModel = PlaylistDetailViewModel(repository, playbackControl, SavedStateHandle())
         viewModel.onEvent(PlaylistDetailUiEvent.LoadPlaylistDetail("playlist-1"))
         advanceUntilIdle()
 
@@ -71,7 +76,7 @@ class PlaylistDetailViewModelTest {
             RuntimeException("Not found")
         )
 
-        viewModel = PlaylistDetailViewModel(repository, SavedStateHandle())
+        viewModel = PlaylistDetailViewModel(repository, playbackControl, SavedStateHandle())
         viewModel.onEvent(PlaylistDetailUiEvent.LoadPlaylistDetail("playlist-1"))
         advanceUntilIdle()
 
@@ -87,7 +92,7 @@ class PlaylistDetailViewModelTest {
         coEvery { repository.getUserPlaylists(false) } returns Result.success(playlists)
         coEvery { repository.getPlaylistTracks("playlist-1") } returns Result.success(tracks)
 
-        viewModel = PlaylistDetailViewModel(repository, SavedStateHandle())
+        viewModel = PlaylistDetailViewModel(repository, playbackControl, SavedStateHandle())
         viewModel.onEvent(PlaylistDetailUiEvent.LoadPlaylistDetail("playlist-1"))
         advanceUntilIdle()
 
@@ -95,10 +100,6 @@ class PlaylistDetailViewModelTest {
             viewModel.onEvent(PlaylistDetailUiEvent.PlayTrack(tracks[1]))
             val effect = awaitItem()
             assertTrue(effect is PlaylistDetailUiEffect.NavigateToNowPlaying)
-            assertEquals(
-                "track-1",
-                (effect as PlaylistDetailUiEffect.NavigateToNowPlaying).trackId
-            )
         }
     }
 
@@ -109,7 +110,7 @@ class PlaylistDetailViewModelTest {
         coEvery { repository.getUserPlaylists(false) } returns Result.success(playlists)
         coEvery { repository.getPlaylistTracks("playlist-1") } returns Result.success(tracks)
 
-        viewModel = PlaylistDetailViewModel(repository, SavedStateHandle())
+        viewModel = PlaylistDetailViewModel(repository, playbackControl, SavedStateHandle())
         viewModel.onEvent(PlaylistDetailUiEvent.LoadPlaylistDetail("playlist-1"))
         advanceUntilIdle()
 
@@ -117,10 +118,6 @@ class PlaylistDetailViewModelTest {
             viewModel.onEvent(PlaylistDetailUiEvent.PlayAll)
             val effect = awaitItem()
             assertTrue(effect is PlaylistDetailUiEffect.NavigateToNowPlaying)
-            assertEquals(
-                "track-0",
-                (effect as PlaylistDetailUiEffect.NavigateToNowPlaying).trackId
-            )
         }
     }
 
@@ -131,7 +128,7 @@ class PlaylistDetailViewModelTest {
         coEvery { repository.getUserPlaylists(false) } returns Result.success(playlists)
         coEvery { repository.getPlaylistTracks("nonexistent") } returns Result.success(tracks)
 
-        viewModel = PlaylistDetailViewModel(repository, SavedStateHandle())
+        viewModel = PlaylistDetailViewModel(repository, playbackControl, SavedStateHandle())
         viewModel.onEvent(PlaylistDetailUiEvent.LoadPlaylistDetail("nonexistent"))
         advanceUntilIdle()
 

@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.tidesapp.wearos.core.domain.model.TrackItem
+import dev.tidesapp.wearos.core.domain.playback.PlaybackControl
 import dev.tidesapp.wearos.library.domain.repository.MixRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.ImmutableList
@@ -47,12 +48,14 @@ sealed interface MixDetailUiEvent {
 
 @Immutable
 sealed interface MixDetailUiEffect {
-    data class NavigateToNowPlaying(val trackId: String) : MixDetailUiEffect
+    data object NavigateToNowPlaying : MixDetailUiEffect
+    data class ShowError(val message: String) : MixDetailUiEffect
 }
 
 @HiltViewModel
 class MixDetailViewModel @Inject constructor(
     private val mixRepository: MixRepository,
+    private val playbackControl: PlaybackControl,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -77,7 +80,7 @@ class MixDetailViewModel @Inject constructor(
     fun onEvent(event: MixDetailUiEvent) {
         when (event) {
             MixDetailUiEvent.LoadMixDetail -> loadMixDetail()
-            MixDetailUiEvent.PlayAll -> playAll()
+            MixDetailUiEvent.PlayAll -> playFromIndex(0)
             MixDetailUiEvent.ShufflePlay -> shufflePlay()
             is MixDetailUiEvent.PlayTrack -> playTrack(event.track)
         }
@@ -103,29 +106,31 @@ class MixDetailViewModel @Inject constructor(
         }
     }
 
-    private fun playAll() {
-        viewModelScope.launch {
-            val state = _uiState.value
-            if (state is MixDetailUiState.Success && state.tracks.isNotEmpty()) {
-                _uiEffect.send(MixDetailUiEffect.NavigateToNowPlaying(state.tracks.first().id))
-            }
-        }
+    private fun playTrack(track: TrackItem) {
+        val state = _uiState.value as? MixDetailUiState.Success ?: return
+        val startIndex = state.tracks.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
+        playFromIndex(startIndex)
     }
 
     private fun shufflePlay() {
-        viewModelScope.launch {
-            val state = _uiState.value
-            if (state is MixDetailUiState.Success && state.tracks.isNotEmpty()) {
-                _uiEffect.send(
-                    MixDetailUiEffect.NavigateToNowPlaying(state.tracks.random().id),
-                )
-            }
-        }
+        val state = _uiState.value as? MixDetailUiState.Success ?: return
+        if (state.tracks.isEmpty()) return
+        val randomIndex = state.tracks.indices.random()
+        playFromIndex(randomIndex)
     }
 
-    private fun playTrack(track: TrackItem) {
+    private fun playFromIndex(startIndex: Int) {
         viewModelScope.launch {
-            _uiEffect.send(MixDetailUiEffect.NavigateToNowPlaying(track.id))
+            val state = _uiState.value
+            if (state !is MixDetailUiState.Success || state.tracks.isEmpty()) return@launch
+
+            playbackControl.playTracks(state.tracks, startIndex)
+                .onSuccess { _uiEffect.send(MixDetailUiEffect.NavigateToNowPlaying) }
+                .onFailure { error ->
+                    _uiEffect.send(
+                        MixDetailUiEffect.ShowError(error.message ?: "Failed to start playback"),
+                    )
+                }
         }
     }
 

@@ -3,8 +3,10 @@ package dev.tidesapp.wearos.library.ui.mixdetail
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import dev.tidesapp.wearos.core.domain.model.TrackItem
+import dev.tidesapp.wearos.core.domain.playback.PlaybackControl
 import dev.tidesapp.wearos.library.domain.repository.MixRepository
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,6 +25,7 @@ import org.junit.Test
 class MixDetailViewModelTest {
 
     private lateinit var repository: MixRepository
+    private lateinit var playbackControl: PlaybackControl
     private lateinit var viewModel: MixDetailViewModel
     private val testDispatcher = StandardTestDispatcher()
 
@@ -39,6 +42,9 @@ class MixDetailViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         repository = mockk()
+        playbackControl = mockk {
+            coEvery { playTracks(any(), any()) } returns Result.success(Unit)
+        }
     }
 
     @After
@@ -51,7 +57,7 @@ class MixDetailViewModelTest {
         val tracks = createTestTracks(3)
         coEvery { repository.getMixItems("mix-abc") } returns Result.success(tracks)
 
-        viewModel = MixDetailViewModel(repository, savedStateHandle)
+        viewModel = MixDetailViewModel(repository, playbackControl, savedStateHandle)
         viewModel.onEvent(MixDetailUiEvent.LoadMixDetail)
         advanceUntilIdle()
 
@@ -70,7 +76,7 @@ class MixDetailViewModelTest {
         coEvery { repository.getMixItems("mix-abc") } returns
             Result.failure(RuntimeException("boom"))
 
-        viewModel = MixDetailViewModel(repository, savedStateHandle)
+        viewModel = MixDetailViewModel(repository, playbackControl, savedStateHandle)
         viewModel.onEvent(MixDetailUiEvent.LoadMixDetail)
         advanceUntilIdle()
 
@@ -80,11 +86,11 @@ class MixDetailViewModelTest {
     }
 
     @Test
-    fun `PlayTrack emits NavigateToNowPlaying with that track id`() = runTest {
+    fun `PlayTrack plays full queue at tapped index and navigates`() = runTest {
         val tracks = createTestTracks(3)
         coEvery { repository.getMixItems("mix-abc") } returns Result.success(tracks)
 
-        viewModel = MixDetailViewModel(repository, savedStateHandle)
+        viewModel = MixDetailViewModel(repository, playbackControl, savedStateHandle)
         viewModel.onEvent(MixDetailUiEvent.LoadMixDetail)
         advanceUntilIdle()
 
@@ -92,19 +98,16 @@ class MixDetailViewModelTest {
             viewModel.onEvent(MixDetailUiEvent.PlayTrack(tracks[2]))
             val effect = awaitItem()
             assertTrue(effect is MixDetailUiEffect.NavigateToNowPlaying)
-            assertEquals(
-                "track-2",
-                (effect as MixDetailUiEffect.NavigateToNowPlaying).trackId,
-            )
         }
+        coVerify(exactly = 1) { playbackControl.playTracks(tracks, 2) }
     }
 
     @Test
-    fun `PlayAll emits NavigateToNowPlaying with first track`() = runTest {
+    fun `PlayAll plays full queue from index 0 and navigates`() = runTest {
         val tracks = createTestTracks(3)
         coEvery { repository.getMixItems("mix-abc") } returns Result.success(tracks)
 
-        viewModel = MixDetailViewModel(repository, savedStateHandle)
+        viewModel = MixDetailViewModel(repository, playbackControl, savedStateHandle)
         viewModel.onEvent(MixDetailUiEvent.LoadMixDetail)
         advanceUntilIdle()
 
@@ -112,11 +115,8 @@ class MixDetailViewModelTest {
             viewModel.onEvent(MixDetailUiEvent.PlayAll)
             val effect = awaitItem()
             assertTrue(effect is MixDetailUiEffect.NavigateToNowPlaying)
-            assertEquals(
-                "track-0",
-                (effect as MixDetailUiEffect.NavigateToNowPlaying).trackId,
-            )
         }
+        coVerify(exactly = 1) { playbackControl.playTracks(tracks, 0) }
     }
 
     private fun createTestTracks(count: Int): List<TrackItem> = List(count) { index ->

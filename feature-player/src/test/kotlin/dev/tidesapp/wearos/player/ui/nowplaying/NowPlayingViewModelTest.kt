@@ -4,7 +4,6 @@ import app.cash.turbine.test
 import dev.tidesapp.wearos.player.domain.model.NowPlayingInfo
 import dev.tidesapp.wearos.player.domain.repository.PlayerRepository
 import dev.tidesapp.wearos.player.domain.repository.PlayerState
-import dev.tidesapp.wearos.player.playback.PlaybackController
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -26,7 +25,6 @@ import org.junit.Test
 class NowPlayingViewModelTest {
 
     private lateinit var playerRepository: PlayerRepository
-    private lateinit var playbackController: PlaybackController
     private val playerStateFlow = MutableStateFlow(PlayerState())
     private val testDispatcher = StandardTestDispatcher()
 
@@ -34,7 +32,6 @@ class NowPlayingViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         playerRepository = mockk(relaxed = true)
-        playbackController = mockk(relaxed = true)
         every { playerRepository.playerState } returns playerStateFlow
     }
 
@@ -45,7 +42,7 @@ class NowPlayingViewModelTest {
 
     @Test
     fun `initial state is Initial when no track`() = runTest {
-        val viewModel = NowPlayingViewModel(playerRepository, playbackController)
+        val viewModel = NowPlayingViewModel(playerRepository)
         advanceUntilIdle()
 
         assertEquals(NowPlayingUiState.Initial, viewModel.uiState.value)
@@ -53,7 +50,7 @@ class NowPlayingViewModelTest {
 
     @Test
     fun `state becomes Playing when track is set`() = runTest {
-        val viewModel = NowPlayingViewModel(playerRepository, playbackController)
+        val viewModel = NowPlayingViewModel(playerRepository)
 
         viewModel.uiState.test {
             assertEquals(NowPlayingUiState.Initial, awaitItem())
@@ -80,7 +77,7 @@ class NowPlayingViewModelTest {
 
     @Test
     fun `PlayPause event calls playerRepository playPause`() = runTest {
-        val viewModel = NowPlayingViewModel(playerRepository, playbackController)
+        val viewModel = NowPlayingViewModel(playerRepository)
         advanceUntilIdle()
 
         viewModel.onEvent(NowPlayingUiEvent.PlayPause)
@@ -90,7 +87,7 @@ class NowPlayingViewModelTest {
 
     @Test
     fun `SkipNext event calls playerRepository skipNext`() = runTest {
-        val viewModel = NowPlayingViewModel(playerRepository, playbackController)
+        val viewModel = NowPlayingViewModel(playerRepository)
         advanceUntilIdle()
 
         viewModel.onEvent(NowPlayingUiEvent.SkipNext)
@@ -100,7 +97,7 @@ class NowPlayingViewModelTest {
 
     @Test
     fun `SkipPrevious event calls playerRepository skipPrevious`() = runTest {
-        val viewModel = NowPlayingViewModel(playerRepository, playbackController)
+        val viewModel = NowPlayingViewModel(playerRepository)
         advanceUntilIdle()
 
         viewModel.onEvent(NowPlayingUiEvent.SkipPrevious)
@@ -110,7 +107,7 @@ class NowPlayingViewModelTest {
 
     @Test
     fun `SeekTo event calls playerRepository seekTo`() = runTest {
-        val viewModel = NowPlayingViewModel(playerRepository, playbackController)
+        val viewModel = NowPlayingViewModel(playerRepository)
         advanceUntilIdle()
 
         viewModel.onEvent(NowPlayingUiEvent.SeekTo(60_000))
@@ -120,7 +117,7 @@ class NowPlayingViewModelTest {
 
     @Test
     fun `error state sends ShowError effect via Channel`() = runTest {
-        val viewModel = NowPlayingViewModel(playerRepository, playbackController)
+        val viewModel = NowPlayingViewModel(playerRepository)
         viewModel.onEvent(NowPlayingUiEvent.ObservePlayerState)
         advanceUntilIdle()
 
@@ -138,7 +135,7 @@ class NowPlayingViewModelTest {
 
     @Test
     fun `error state maps to Error UiState`() = runTest {
-        val viewModel = NowPlayingViewModel(playerRepository, playbackController)
+        val viewModel = NowPlayingViewModel(playerRepository)
 
         viewModel.uiState.test {
             assertEquals(NowPlayingUiState.Initial, awaitItem())

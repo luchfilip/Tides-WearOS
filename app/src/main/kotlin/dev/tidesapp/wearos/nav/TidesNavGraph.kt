@@ -61,8 +61,6 @@ object Routes {
         val encodedTitle = Uri.encode(title)
         return "view_all?path=$encodedPath&title=$encodedTitle"
     }
-    fun nowPlaying(trackId: String? = null): String =
-        if (trackId != null) "now_playing?trackId=$trackId" else "now_playing"
 }
 
 @Composable
@@ -123,7 +121,7 @@ fun TidesNavGraph() {
                     navController.navigate(Routes.viewAll(path, title))
                 },
                 onNavigateToNowPlaying = {
-                    navController.navigate(Routes.nowPlaying())
+                    navController.navigate(Routes.NOW_PLAYING)
                 },
                 onNavigateToSearch = {
                     navController.navigate(Routes.SEARCH)
@@ -157,8 +155,8 @@ fun TidesNavGraph() {
             val albumId = backStackEntry.arguments?.getString("albumId").orEmpty()
             AlbumDetailScreen(
                 albumId = albumId,
-                onNavigateToNowPlaying = { trackId ->
-                    navController.navigate(Routes.nowPlaying(trackId))
+                onNavigateToNowPlaying = {
+                    navController.navigate(Routes.NOW_PLAYING)
                 },
             )
         }
@@ -170,8 +168,8 @@ fun TidesNavGraph() {
             val playlistId = backStackEntry.arguments?.getString("playlistId").orEmpty()
             PlaylistDetailScreen(
                 playlistId = playlistId,
-                onNavigateToNowPlaying = { trackId ->
-                    navController.navigate(Routes.nowPlaying(trackId))
+                onNavigateToNowPlaying = {
+                    navController.navigate(Routes.NOW_PLAYING)
                 },
             )
         }
@@ -198,8 +196,8 @@ fun TidesNavGraph() {
             ),
         ) {
             MixDetailScreen(
-                onNavigateToNowPlaying = { trackId ->
-                    navController.navigate(Routes.nowPlaying(trackId))
+                onNavigateToNowPlaying = {
+                    navController.navigate(Routes.NOW_PLAYING)
                 },
             )
         }
@@ -240,25 +238,14 @@ fun TidesNavGraph() {
                 onNavigateToPlaylistDetail = { playlistId ->
                     navController.navigate(Routes.playlistDetail(playlistId))
                 },
-                onNavigateToNowPlaying = { trackId ->
-                    navController.navigate(Routes.nowPlaying(trackId))
+                onNavigateToNowPlaying = {
+                    navController.navigate(Routes.NOW_PLAYING)
                 },
             )
         }
 
-        composable(
-            route = "now_playing?trackId={trackId}",
-            arguments = listOf(
-                navArgument("trackId") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                },
-            ),
-        ) { backStackEntry ->
-            val trackId = backStackEntry.arguments?.getString("trackId")
+        composable(Routes.NOW_PLAYING) {
             NowPlayingScreen(
-                trackId = trackId,
                 onNavigateBack = {
                     navController.popBackStack()
                 },

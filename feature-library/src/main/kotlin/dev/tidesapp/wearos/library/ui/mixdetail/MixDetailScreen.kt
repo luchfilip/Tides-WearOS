@@ -23,7 +23,7 @@ import kotlinx.collections.immutable.ImmutableList
 
 @Composable
 fun MixDetailScreen(
-    onNavigateToNowPlaying: (String) -> Unit,
+    onNavigateToNowPlaying: () -> Unit,
     viewModel: MixDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -36,8 +36,8 @@ fun MixDetailScreen(
     LaunchedEffect(Unit) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
-                is MixDetailUiEffect.NavigateToNowPlaying ->
-                    onNavigateToNowPlaying(effect.trackId)
+                MixDetailUiEffect.NavigateToNowPlaying -> onNavigateToNowPlaying()
+                is MixDetailUiEffect.ShowError -> { /* surfaced via state elsewhere */ }
             }
         }
     }

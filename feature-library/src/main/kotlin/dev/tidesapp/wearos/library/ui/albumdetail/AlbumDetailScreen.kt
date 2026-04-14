@@ -25,7 +25,7 @@ import kotlinx.collections.immutable.ImmutableList
 @Composable
 fun AlbumDetailScreen(
     albumId: String,
-    onNavigateToNowPlaying: (String) -> Unit,
+    onNavigateToNowPlaying: () -> Unit,
     viewModel: AlbumDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -38,8 +38,8 @@ fun AlbumDetailScreen(
     LaunchedEffect(Unit) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
-                is AlbumDetailUiEffect.NavigateToNowPlaying ->
-                    onNavigateToNowPlaying(effect.trackId)
+                AlbumDetailUiEffect.NavigateToNowPlaying -> onNavigateToNowPlaying()
+                is AlbumDetailUiEffect.ShowError -> { /* surfaced via state elsewhere */ }
             }
         }
     }

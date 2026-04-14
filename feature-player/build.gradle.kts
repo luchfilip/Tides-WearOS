@@ -22,6 +22,15 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
+    testOptions {
+        unitTests {
+            // Allow JVM unit tests to exercise classes that lightly touch
+            // android.* framework stubs (e.g. Media3 MediaItem builders) by
+            // returning defaults instead of throwing "Method ... not mocked".
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 dependencies {

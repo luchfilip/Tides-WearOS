@@ -6,6 +6,7 @@ import dev.tidesapp.wearos.core.domain.model.ArtistItem
 import dev.tidesapp.wearos.core.domain.model.PlaylistItem
 import dev.tidesapp.wearos.core.domain.model.SearchResult
 import dev.tidesapp.wearos.core.domain.model.TrackItem
+import dev.tidesapp.wearos.core.domain.playback.PlaybackControl
 import dev.tidesapp.wearos.library.domain.repository.SearchRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -29,6 +30,7 @@ import org.junit.Test
 class SearchViewModelTest {
 
     private lateinit var repository: SearchRepository
+    private lateinit var playbackControl: PlaybackControl
     private lateinit var viewModel: SearchViewModel
     private val testDispatcher = StandardTestDispatcher()
 
@@ -36,6 +38,9 @@ class SearchViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         repository = mockk()
+        playbackControl = mockk {
+            coEvery { playTracks(any(), any()) } returns Result.success(Unit)
+        }
     }
 
     @After
@@ -45,7 +50,7 @@ class SearchViewModelTest {
 
     @Test
     fun `initial state is Initial`() {
-        viewModel = SearchViewModel(repository)
+        viewModel = SearchViewModel(repository, playbackControl)
         assertEquals(SearchUiState.Initial, viewModel.uiState.value)
     }
 
@@ -54,7 +59,7 @@ class SearchViewModelTest {
         val searchResult = createTestSearchResult()
         coEvery { repository.search("test") } returns Result.success(searchResult)
 
-        viewModel = SearchViewModel(repository)
+        viewModel = SearchViewModel(repository, playbackControl)
         viewModel.onEvent(SearchUiEvent.Search("test"))
         advanceUntilIdle()
 
@@ -67,7 +72,7 @@ class SearchViewModelTest {
 
     @Test
     fun `Search with blank query does not call API`() = runTest {
-        viewModel = SearchViewModel(repository)
+        viewModel = SearchViewModel(repository, playbackControl)
         viewModel.onEvent(SearchUiEvent.Search(""))
         advanceUntilIdle()
 
@@ -77,7 +82,7 @@ class SearchViewModelTest {
 
     @Test
     fun `Search with whitespace-only query does not call API`() = runTest {
-        viewModel = SearchViewModel(repository)
+        viewModel = SearchViewModel(repository, playbackControl)
         viewModel.onEvent(SearchUiEvent.Search("   "))
         advanceUntilIdle()
 
@@ -91,7 +96,7 @@ class SearchViewModelTest {
             RuntimeException("Search failed")
         )
 
-        viewModel = SearchViewModel(repository)
+        viewModel = SearchViewModel(repository, playbackControl)
         viewModel.onEvent(SearchUiEvent.Search("test"))
         advanceUntilIdle()
 
@@ -110,7 +115,7 @@ class SearchViewModelTest {
         )
         coEvery { repository.search("xyz") } returns Result.success(emptyResult)
 
-        viewModel = SearchViewModel(repository)
+        viewModel = SearchViewModel(repository, playbackControl)
         viewModel.onEvent(SearchUiEvent.Search("xyz"))
         advanceUntilIdle()
 
@@ -122,7 +127,7 @@ class SearchViewModelTest {
         val searchResult = createTestSearchResult()
         coEvery { repository.search("test") } returns Result.success(searchResult)
 
-        viewModel = SearchViewModel(repository)
+        viewModel = SearchViewModel(repository, playbackControl)
         viewModel.onEvent(SearchUiEvent.Search("test"))
         advanceUntilIdle()
 
@@ -137,27 +142,26 @@ class SearchViewModelTest {
     }
 
     @Test
-    fun `Track ResultClicked emits NavigateToNowPlaying effect`() = runTest {
+    fun `Track ResultClicked plays queue and emits NavigateToNowPlaying`() = runTest {
         val searchResult = createTestSearchResult()
         coEvery { repository.search("test") } returns Result.success(searchResult)
 
-        viewModel = SearchViewModel(repository)
+        viewModel = SearchViewModel(repository, playbackControl)
         viewModel.onEvent(SearchUiEvent.Search("test"))
         advanceUntilIdle()
 
+        val tappedTrack = searchResult.tracks.first()
         viewModel.uiEffect.test {
-            viewModel.onEvent(
-                SearchUiEvent.ResultClicked(SearchResultType.Track("track-0"))
-            )
+            viewModel.onEvent(SearchUiEvent.ResultClicked(SearchResultType.Track(tappedTrack)))
             val effect = awaitItem()
             assertTrue(effect is SearchUiEffect.NavigateToNowPlaying)
-            assertEquals("track-0", (effect as SearchUiEffect.NavigateToNowPlaying).trackId)
         }
+        coVerify(exactly = 1) { playbackControl.playTracks(listOf(tappedTrack), 0) }
     }
 
     @Test
     fun `Playlist ResultClicked emits NavigateToPlaylistDetail effect`() = runTest {
-        viewModel = SearchViewModel(repository)
+        viewModel = SearchViewModel(repository, playbackControl)
 
         viewModel.uiEffect.test {
             viewModel.onEvent(
@@ -177,7 +181,7 @@ class SearchViewModelTest {
         val searchResult = createTestSearchResult()
         coEvery { repository.search("test") } returns Result.success(searchResult)
 
-        viewModel = SearchViewModel(repository)
+        viewModel = SearchViewModel(repository, playbackControl)
         viewModel.onEvent(SearchUiEvent.Search("test"))
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value is SearchUiState.Success)
