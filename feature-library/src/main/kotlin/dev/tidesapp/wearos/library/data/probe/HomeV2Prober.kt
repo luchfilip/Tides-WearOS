@@ -1,12 +1,10 @@
 package dev.tidesapp.wearos.library.data.probe
 
 import com.tidal.sdk.auth.CredentialsProvider
+import dev.tidesapp.wearos.core.time.TimeOffsetFormatter
 import dev.tidesapp.wearos.library.data.api.ProbeApi
 import okhttp3.ResponseBody
 import retrofit2.Response
-import java.time.Clock
-import java.time.ZoneId
-import java.time.ZoneOffset
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -40,8 +38,7 @@ data class ProbeResult(
 class HomeV2Prober @Inject constructor(
     private val probeApi: ProbeApi,
     private val credentialsProvider: CredentialsProvider,
-    private val clock: Clock = Clock.systemDefaultZone(),
-    private val zoneId: ZoneId = ZoneId.systemDefault(),
+    private val timeOffsetFormatter: TimeOffsetFormatter,
 ) {
 
     /**
@@ -63,8 +60,8 @@ class HomeV2Prober @Inject constructor(
                 ),
             )
 
-        val refreshId = clock.millis()
-        val timeOffset = currentTimeOffset()
+        val refreshId = timeOffsetFormatter.refreshId()
+        val timeOffset = timeOffsetFormatter.timeOffset()
 
         val results = mutableListOf<ProbeResult>()
 
@@ -128,22 +125,6 @@ class HomeV2Prober @Inject constructor(
                 error = t.javaClass.simpleName + ": " + (t.message ?: "unknown"),
             )
         }
-    }
-
-    /**
-     * Returns the device's current UTC offset formatted as `±HH:MM`
-     * (e.g. `-05:00`, `+02:00`). Matches the format the phone app sends in the
-     * `timeOffset` query param — see `.docs/03-home-feed.md §2.1`.
-     * Retrofit will URL-encode the colon when emitting the query string.
-     */
-    internal fun currentTimeOffset(): String {
-        val offset: ZoneOffset = zoneId.rules.getOffset(clock.instant())
-        val totalSeconds = offset.totalSeconds
-        val sign = if (totalSeconds < 0) "-" else "+"
-        val abs = kotlin.math.abs(totalSeconds)
-        val hours = abs / 3600
-        val minutes = (abs % 3600) / 60
-        return "%s%02d:%02d".format(sign, hours, minutes)
     }
 
     private fun Response<ResponseBody>.tidalHeaders(): Map<String, String> {

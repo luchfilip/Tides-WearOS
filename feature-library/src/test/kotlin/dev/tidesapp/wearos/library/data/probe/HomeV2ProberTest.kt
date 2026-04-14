@@ -1,6 +1,12 @@
 package dev.tidesapp.wearos.library.data.probe
 
+// Note: timeOffset / refreshId formatting tests live in
+// core/.../time/TimeOffsetFormatterTest — they moved out of here in TIDES-M2C
+// when the formatter was extracted into a shared helper. This test now mocks
+// the formatter and focuses on probe orchestration only.
+
 import com.tidal.sdk.auth.CredentialsProvider
+import dev.tidesapp.wearos.core.time.TimeOffsetFormatter
 import dev.tidesapp.wearos.library.data.api.ProbeApi
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -20,24 +26,17 @@ import org.junit.Before
 import org.junit.Test
 import retrofit2.Response
 import java.io.IOException
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneId
-import java.time.ZoneOffset
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeV2ProberTest {
 
     private lateinit var probeApi: ProbeApi
     private lateinit var credentialsProvider: CredentialsProvider
+    private lateinit var timeOffsetFormatter: TimeOffsetFormatter
     private lateinit var prober: HomeV2Prober
 
-    // Fixed clock + zone so we can assert exact refreshId / timeOffset values.
-    // 2026-04-14T12:34:56Z in New York (UTC-04:00 during DST).
-    private val fixedInstant: Instant = Instant.parse("2026-04-14T12:34:56Z")
-    private val fixedClock: Clock = Clock.fixed(fixedInstant, ZoneOffset.UTC)
-    private val nyZone: ZoneId = ZoneId.of("America/New_York")
-    private val expectedRefreshId: Long = fixedInstant.toEpochMilli()
+    // Fixed values so we can assert the exact refreshId / timeOffset passed to the probes.
+    private val expectedRefreshId: Long = 1728921296000L
     private val expectedTimeOffset: String = "-04:00"
 
     @Before
@@ -50,7 +49,11 @@ class HomeV2ProberTest {
                 }
             }
         }
-        prober = HomeV2Prober(probeApi, credentialsProvider, fixedClock, nyZone)
+        timeOffsetFormatter = mockk {
+            every { refreshId() } returns expectedRefreshId
+            every { timeOffset() } returns expectedTimeOffset
+        }
+        prober = HomeV2Prober(probeApi, credentialsProvider, timeOffsetFormatter)
     }
 
     @Test
@@ -115,28 +118,6 @@ class HomeV2ProberTest {
                 limit = 50,
             )
         }
-    }
-
-    @Test
-    fun `currentTimeOffset formats positive offsets with plus sign`() {
-        val plus0530 = HomeV2Prober(
-            probeApi,
-            credentialsProvider,
-            Clock.fixed(fixedInstant, ZoneOffset.UTC),
-            ZoneId.of("Asia/Kolkata"), // +05:30
-        )
-        assertEquals("+05:30", plus0530.currentTimeOffset())
-    }
-
-    @Test
-    fun `currentTimeOffset formats UTC as plus zero`() {
-        val utc = HomeV2Prober(
-            probeApi,
-            credentialsProvider,
-            Clock.fixed(fixedInstant, ZoneOffset.UTC),
-            ZoneOffset.UTC,
-        )
-        assertEquals("+00:00", utc.currentTimeOffset())
     }
 
     @Test
@@ -225,7 +206,7 @@ class HomeV2ProberTest {
                 }
             }
         }
-        prober = HomeV2Prober(probeApi, credentialsProvider)
+        prober = HomeV2Prober(probeApi, credentialsProvider, timeOffsetFormatter)
 
         val results = prober.runAll(playlistUuid = "pl-1")
 
