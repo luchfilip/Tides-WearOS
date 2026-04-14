@@ -3,6 +3,7 @@ package dev.tidesapp.wearos.library.data.api
 import dev.tidesapp.wearos.library.data.dto.AlbumDataDto
 import dev.tidesapp.wearos.library.data.dto.CollectionAlbumsResponseDto
 import dev.tidesapp.wearos.library.data.dto.CollectionPlaylistsResponseDto
+import dev.tidesapp.wearos.library.data.dto.HomeFeedV2ResponseDto
 import dev.tidesapp.wearos.library.data.dto.HomePageResponseDto
 import dev.tidesapp.wearos.library.data.dto.PlaylistDataDto
 import dev.tidesapp.wearos.library.data.dto.SearchResponseDto
@@ -64,6 +65,14 @@ interface TidesLibraryApi {
     suspend fun getHomePage(
         @Header("Authorization") token: String,
     ): HomePageResponseDto
+
+    @GET("v2/home/feed/STATIC")
+    suspend fun getHomeFeedV2(
+        @Header("Authorization") token: String,
+        @Query("refreshId") refreshId: Long,
+        @Query("timeOffset") timeOffset: String,
+        @Query("limit") limit: Int = 20,
+    ): HomeFeedV2ResponseDto
 
     @GET("v2/search")
     suspend fun search(

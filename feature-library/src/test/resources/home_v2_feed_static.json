@@ -1,0 +1,297 @@
+{
+  "uuid": "b72f0972-fffc-491c-9d1a-d538ee872eb6",
+  "page": { "cursor": "UE9QVUxBUl9QTEFZTElTVFM=" },
+  "header": {
+    "vibes": {
+      "items": [
+        { "name": "For you",     "type": "STATIC" },
+        { "name": "Staff Picks", "type": "EDITORIAL" },
+        { "name": "Uploads",     "type": "UPLOADS" }
+      ]
+    }
+  },
+  "items": [
+    {
+      "type": "SHORTCUT_LIST",
+      "moduleId": "SHORTCUT_LIST",
+      "title": "Shortcuts",
+      "subtitle": null,
+      "icons": [],
+      "viewAll": null,
+      "items": [
+        {
+          "type": "DEEP_LINK",
+          "data": {
+            "title": "My Tracks",
+            "id": "tidal://my-collection/tracks",
+            "url": "tidal://my-collection/tracks",
+            "externalUrl": false
+          }
+        },
+        {
+          "type": "PLAYLIST",
+          "following": false,
+          "numberOfFollowers": 0,
+          "data": {
+            "uuid": "6cb7b0cb-5701-4fcd-b51a-b127abfffe2e",
+            "type": "USER",
+            "creator": { "id": 92088961, "name": "Patricio", "picture": null, "type": "USER" },
+            "title": "Ben Böhmer",
+            "description": "",
+            "image": "b674d522-9beb-4edb-a831-524da0126212",
+            "squareImage": "eec0b56b-9b3b-4b22-9b38-1fcb9fc99f8e",
+            "numberOfTracks": 42,
+            "duration": 16913,
+            "promotedArtists": [],
+            "trn": "trn:playlist:6cb7b0cb-5701-4fcd-b51a-b127abfffe2e"
+          }
+        },
+        {
+          "type": "MIX",
+          "following": false,
+          "data": {
+            "type": "TRACK_MIX",
+            "countryCode": "WW",
+            "id": "00155914c3b5c1a6d3a83a27b4f941",
+            "isStableId": true,
+            "mixImages": [
+              { "size": "SMALL",  "url": "https://resources.tidal.com/mix/small.jpg",  "width": 320,  "height": 320 },
+              { "size": "MEDIUM", "url": "https://resources.tidal.com/mix/medium.jpg", "width": 640,  "height": 640 },
+              { "size": "LARGE",  "url": "https://resources.tidal.com/mix/large.jpg",  "width": 1500, "height": 1500 }
+            ],
+            "titleTextInfo":    { "text": "What Else Is There?", "color": "#DFD0B2" },
+            "subtitleTextInfo": { "text": "Röyksopp",            "color": "#DFD0B2" },
+            "contentBehavior": "UNRESTRICTED"
+          }
+        }
+      ]
+    },
+    {
+      "type": "GRID_CARD",
+      "moduleId": "POPULAR_PLAYLISTS",
+      "title": "Popular playlists",
+      "subtitle": null,
+      "icons": [],
+      "viewAll": "home/pages/POPULAR_PLAYLISTS/view-all",
+      "items": [
+        {
+          "type": "PLAYLIST",
+          "following": false,
+          "numberOfFollowers": 1234,
+          "data": {
+            "uuid": "aaaaaaaa-0000-0000-0000-000000000001",
+            "type": "EDITORIAL",
+            "creator": { "id": 0, "name": null, "picture": null, "type": "TIDAL" },
+            "title": "Editor's picks #1",
+            "description": "desc",
+            "image": "11111111-1111-1111-1111-111111111111",
+            "squareImage": "22222222-2222-2222-2222-222222222222",
+            "numberOfTracks": 50,
+            "duration": 12000,
+            "promotedArtists": [ { "id": 999, "name": "Promoted Artist", "type": "MAIN" } ],
+            "trn": "trn:playlist:aaaaaaaa-0000-0000-0000-000000000001"
+          }
+        },
+        {
+          "type": "PLAYLIST",
+          "data": {
+            "uuid": "aaaaaaaa-0000-0000-0000-000000000002",
+            "type": "EDITORIAL",
+            "creator": { "id": 0, "name": null, "type": "TIDAL" },
+            "title": "Editor's picks #2",
+            "image": "33333333-3333-3333-3333-333333333333",
+            "squareImage": null,
+            "numberOfTracks": 30,
+            "duration": 8000,
+            "promotedArtists": []
+          }
+        },
+        {
+          "type": "PLAYLIST",
+          "data": {
+            "uuid": "aaaaaaaa-0000-0000-0000-000000000003",
+            "title": "Editor's picks #3",
+            "squareImage": "44444444-4444-4444-4444-444444444444"
+          }
+        },
+        {
+          "type": "PLAYLIST",
+          "data": {
+            "uuid": "aaaaaaaa-0000-0000-0000-000000000004",
+            "title": "Editor's picks #4",
+            "squareImage": "55555555-5555-5555-5555-555555555555"
+          }
+        },
+        {
+          "type": "PLAYLIST",
+          "data": {
+            "uuid": "aaaaaaaa-0000-0000-0000-000000000005",
+            "title": "Editor's picks #5",
+            "squareImage": "66666666-6666-6666-6666-666666666666"
+          }
+        },
+        {
+          "type": "PLAYLIST",
+          "data": {
+            "uuid": "aaaaaaaa-0000-0000-0000-000000000006",
+            "title": "Editor's picks #6 (should be truncated)",
+            "squareImage": "77777777-7777-7777-7777-777777777777"
+          }
+        },
+        {
+          "type": "PLAYLIST",
+          "data": {
+            "uuid": "aaaaaaaa-0000-0000-0000-000000000007",
+            "title": "Editor's picks #7 (should be truncated)"
+          }
+        }
+      ]
+    },
+    {
+      "type": "COMPACT_GRID_CARD",
+      "moduleId": "CONTINUE_LISTEN_TO",
+      "title": "Continue listening",
+      "subtitle": null,
+      "icons": [],
+      "viewAll": null,
+      "items": [
+        {
+          "type": "TRACK",
+          "data": {
+            "id": 513016456,
+            "title": "APOLLO",
+            "duration": 185
+          }
+        },
+        {
+          "type": "MIX",
+          "data": {
+            "type": "DAILY_MIX",
+            "id": "001daily0000000000000000000001",
+            "mixImages": [
+              { "size": "MEDIUM", "url": "https://resources.tidal.com/mix/daily-medium.jpg", "width": 640, "height": 640 }
+            ],
+            "titleTextInfo":    { "text": "Daily Mix 1",  "color": "#123456" },
+            "subtitleTextInfo": { "text": "For you",      "color": "#123456" }
+          }
+        }
+      ]
+    },
+    {
+      "type": "GRID_CARD_WITH_CONTEXT",
+      "moduleId": "BECAUSE_YOU_LISTENED_TO_ALBUM",
+      "title": "Because you listened to Sample Album",
+      "subtitle": null,
+      "icons": [],
+      "viewAll": "home/pages/BECAUSE_YOU_LISTENED_TO_ALBUM/view-all?itemId=abc",
+      "header": {
+        "type": "ALBUM",
+        "data": {
+          "id": 111111111,
+          "title": "Sample Album",
+          "cover": "52fc589d-48f9-46c1-acca-e7e0e6adaed6"
+        }
+      },
+      "items": [
+        {
+          "type": "ALBUM",
+          "data": {
+            "id": 111111111,
+            "title": "Sample Album",
+            "cover": "52fc589d-48f9-46c1-acca-e7e0e6adaed6",
+            "artists": [
+              { "id": 222222, "name": "Sample Artist", "main": true },
+              { "id": 4505007, "name": "Featured Guest", "main": false }
+            ],
+            "numberOfTracks": 13
+          }
+        },
+        {
+          "type": "ALBUM",
+          "data": {
+            "id": 189971623,
+            "title": "Second album",
+            "cover": "52fc589d-48f9-46c1-acca-e7e0e6adaed7",
+            "artists": [
+              { "id": 4505008, "name": "Other Artist", "main": false }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "ARTIST_LIST",
+      "moduleId": "YOUR_FAVORITE_ARTISTS",
+      "title": "Your favorite artists",
+      "subtitle": null,
+      "icons": [],
+      "viewAll": null,
+      "items": [
+        {
+          "type": "ARTIST",
+          "data": {
+            "id": 9120590,
+            "name": "Volen Sentir",
+            "picture": null
+          }
+        }
+      ]
+    },
+    {
+      "type": "FUTURE_UNKNOWN_MODULE_TYPE",
+      "moduleId": "SOMETHING_NEW",
+      "title": "Something we do not know about",
+      "subtitle": null,
+      "icons": [],
+      "viewAll": null,
+      "items": [
+        {
+          "type": "PLAYLIST",
+          "data": {
+            "uuid": "bbbbbbbb-0000-0000-0000-000000000001",
+            "title": "Ignored playlist"
+          }
+        }
+      ]
+    },
+    {
+      "type": "GRID_CARD",
+      "moduleId": "BLANK_TITLE_MODULE",
+      "title": "",
+      "subtitle": null,
+      "icons": [],
+      "viewAll": null,
+      "items": [
+        {
+          "type": "PLAYLIST",
+          "data": {
+            "uuid": "cccccccc-0000-0000-0000-000000000001",
+            "title": "Should not appear"
+          }
+        }
+      ]
+    },
+    {
+      "type": "GRID_CARD",
+      "moduleId": "ALL_UNSUPPORTED_INNER",
+      "title": "All unsupported inside",
+      "subtitle": null,
+      "icons": [],
+      "viewAll": null,
+      "items": [
+        {
+          "type": "TRACK",
+          "data": { "id": 1, "title": "t1" }
+        },
+        {
+          "type": "ARTIST",
+          "data": { "id": 2, "name": "a1" }
+        },
+        {
+          "type": "DEEP_LINK",
+          "data": { "title": "dl", "id": "tidal://x", "url": "tidal://x", "externalUrl": false }
+        }
+      ]
+    }
+  ]
+}
