@@ -19,6 +19,7 @@ import dev.tidesapp.wearos.library.ui.mixdetail.MixDetailScreen
 import dev.tidesapp.wearos.library.ui.playlistdetail.PlaylistDetailScreen
 import dev.tidesapp.wearos.library.ui.playlists.PlaylistsScreen
 import dev.tidesapp.wearos.library.ui.search.SearchScreen
+import dev.tidesapp.wearos.library.ui.viewall.ViewAllScreen
 import dev.tidesapp.wearos.player.ui.nowplaying.NowPlayingScreen
 import dev.tidesapp.wearos.settings.ui.settings.SettingsScreen
 import kotlinx.serialization.Serializable
@@ -29,6 +30,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class AlbumDetailRoute(val albumId: String)
 @Serializable data class PlaylistDetailRoute(val playlistId: String)
 @Serializable data class MixDetailRoute(val mixId: String)
+@Serializable data class ViewAllRoute(val path: String, val title: String)
 @Serializable object SearchRoute
 @Serializable object NowPlayingRoute
 @Serializable object SettingsRoute
@@ -41,6 +43,7 @@ object Routes {
     const val ALBUM_DETAIL = "album_detail/{albumId}"
     const val PLAYLIST_DETAIL = "playlist_detail/{playlistId}"
     const val MIX_DETAIL = "mix_detail/{mixId}?title={title}&subTitle={subTitle}&imageUrl={imageUrl}"
+    const val VIEW_ALL = "view_all?path={path}&title={title}"
     const val SEARCH = "search"
     const val NOW_PLAYING = "now_playing"
     const val SETTINGS = "settings"
@@ -52,6 +55,11 @@ object Routes {
         val encodedSubtitle = Uri.encode(subTitle.orEmpty())
         val encodedImage = Uri.encode(imageUrl.orEmpty())
         return "mix_detail/$mixId?title=$encodedTitle&subTitle=$encodedSubtitle&imageUrl=$encodedImage"
+    }
+    fun viewAll(path: String, title: String): String {
+        val encodedPath = Uri.encode(path)
+        val encodedTitle = Uri.encode(title)
+        return "view_all?path=$encodedPath&title=$encodedTitle"
     }
     fun nowPlaying(trackId: String? = null): String =
         if (trackId != null) "now_playing?trackId=$trackId" else "now_playing"
@@ -110,6 +118,9 @@ fun TidesNavGraph() {
                 },
                 onNavigateToMix = { mixId, title, subTitle, imageUrl ->
                     navController.navigate(Routes.mixDetail(mixId, title, subTitle, imageUrl))
+                },
+                onNavigateToViewAll = { path, title ->
+                    navController.navigate(Routes.viewAll(path, title))
                 },
                 onNavigateToNowPlaying = {
                     navController.navigate(Routes.nowPlaying())
@@ -189,6 +200,34 @@ fun TidesNavGraph() {
             MixDetailScreen(
                 onNavigateToNowPlaying = { trackId ->
                     navController.navigate(Routes.nowPlaying(trackId))
+                },
+            )
+        }
+
+        composable(
+            route = Routes.VIEW_ALL,
+            arguments = listOf(
+                navArgument("path") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("title") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+            ),
+        ) {
+            ViewAllScreen(
+                onNavigateToAlbum = { albumId ->
+                    navController.navigate(Routes.albumDetail(albumId))
+                },
+                onNavigateToPlaylist = { playlistId ->
+                    navController.navigate(Routes.playlistDetail(playlistId))
+                },
+                onNavigateToMix = { mixId, title, subTitle, imageUrl ->
+                    navController.navigate(Routes.mixDetail(mixId, title, subTitle, imageUrl))
                 },
             )
         }

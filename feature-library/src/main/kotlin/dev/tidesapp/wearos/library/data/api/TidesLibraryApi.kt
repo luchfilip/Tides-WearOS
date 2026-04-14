@@ -8,10 +8,12 @@ import dev.tidesapp.wearos.library.data.dto.PlaylistDataDto
 import dev.tidesapp.wearos.library.data.dto.SearchResponseDto
 import dev.tidesapp.wearos.library.data.dto.V1MixItemsResponseDto
 import dev.tidesapp.wearos.library.data.dto.V1TrackListResponseDto
+import dev.tidesapp.wearos.library.data.dto.ViewAllResponseDto
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Url
 
 interface TidesLibraryApi {
 
@@ -76,6 +78,23 @@ interface TidesLibraryApi {
         @Query("timeOffset") timeOffset: String,
         @Query("limit") limit: Int = 20,
     ): HomeFeedV2ResponseDto
+
+    /**
+     * Generic "See all" endpoint. The [url] is a relative path (e.g.
+     * `"v2/home/pages/POPULAR_PLAYLISTS/view-all"` — the caller is responsible for
+     * prepending `"v2/"` to the opaque [dev.tidesapp.wearos.library.data.dto.HomeFeedV2ModuleDto.viewAll]
+     * string returned by the server). Retrofit's [Url] preserves any existing query
+     * segment on the path (e.g. `?itemId=...`) and merges the additional @Query params.
+     */
+    @GET
+    suspend fun getViewAll(
+        @Header("Authorization") token: String,
+        @Url url: String,
+        @Query("refreshId") refreshId: Long,
+        @Query("timeOffset") timeOffset: String,
+        @Query("offset") offset: Int = 0,
+        @Query("limit") limit: Int = 50,
+    ): ViewAllResponseDto
 
     @GET("v2/search")
     suspend fun search(

@@ -25,6 +25,7 @@ fun HomeScreen(
     onNavigateToAlbum: (String) -> Unit,
     onNavigateToPlaylist: (String) -> Unit,
     onNavigateToMix: (mixId: String, title: String, subTitle: String?, imageUrl: String?) -> Unit,
+    onNavigateToViewAll: (viewAllPath: String, title: String) -> Unit,
     onNavigateToNowPlaying: () -> Unit,
     onNavigateToSearch: () -> Unit,
     onNavigateToSettings: () -> Unit,
@@ -51,6 +52,8 @@ fun HomeScreen(
                     effect.subTitle,
                     effect.imageUrl,
                 )
+                is HomeUiEffect.NavigateToViewAll ->
+                    onNavigateToViewAll(effect.viewAllPath, effect.title)
             }
         }
     }
@@ -119,11 +122,30 @@ private fun HomeList(
         feedSections.forEach { section ->
             if (section.title.isNotBlank()) {
                 item {
-                    Text(
-                        text = section.title,
-                        style = MaterialTheme.typography.title3,
-                        color = MaterialTheme.colors.primary,
-                    )
+                    val viewAllPath = section.viewAllPath
+                    if (viewAllPath != null) {
+                        // Dense tappable section header — doubles as the "See all" affordance
+                        // so we don't have to burn an extra chip row per section on-wrist.
+                        TidesChip(
+                            label = section.title,
+                            secondaryLabel = "See all",
+                            onClick = {
+                                onEvent(
+                                    HomeUiEvent.SectionSeeAllClicked(
+                                        viewAllPath = viewAllPath,
+                                        sectionTitle = section.title,
+                                    ),
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        Text(
+                            text = section.title,
+                            style = MaterialTheme.typography.title3,
+                            color = MaterialTheme.colors.primary,
+                        )
+                    }
                 }
             }
             items(section.items.size) { index ->

@@ -153,6 +153,25 @@ class HomeViewModelTest {
         }
     }
 
+    @Test
+    fun `SectionSeeAllClicked emits NavigateToViewAll with path and title`() = runTest {
+        viewModel = buildViewModel(FakeHomeRepository(Result.success(fakeSections)))
+
+        viewModel.uiEffect.test {
+            viewModel.onEvent(
+                HomeUiEvent.SectionSeeAllClicked(
+                    viewAllPath = "home/pages/POPULAR_PLAYLISTS/view-all",
+                    sectionTitle = "Popular playlists",
+                ),
+            )
+            val effect = awaitItem()
+            assertTrue(effect is HomeUiEffect.NavigateToViewAll)
+            val nav = effect as HomeUiEffect.NavigateToViewAll
+            assertEquals("home/pages/POPULAR_PLAYLISTS/view-all", nav.viewAllPath)
+            assertEquals("Popular playlists", nav.title)
+        }
+    }
+
     private class FakeHomeRepository(
         private val result: Result<List<HomeFeedSection>> = Result.success(emptyList()),
     ) : HomeRepository {

@@ -2,12 +2,14 @@ package dev.tidesapp.wearos.library.domain.mapper
 
 import dev.tidesapp.wearos.core.domain.model.HomeFeedItem
 import dev.tidesapp.wearos.core.domain.model.HomeFeedSection
+import dev.tidesapp.wearos.core.domain.model.ViewAllPage
 import dev.tidesapp.wearos.library.data.dto.HomeFeedV2AlbumPayload
 import dev.tidesapp.wearos.library.data.dto.HomeFeedV2ItemEnvelopeDto
 import dev.tidesapp.wearos.library.data.dto.HomeFeedV2MixPayload
 import dev.tidesapp.wearos.library.data.dto.HomeFeedV2ModuleDto
 import dev.tidesapp.wearos.library.data.dto.HomeFeedV2PlaylistPayload
 import dev.tidesapp.wearos.library.data.dto.HomeFeedV2ResponseDto
+import dev.tidesapp.wearos.library.data.dto.ViewAllResponseDto
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -38,18 +40,38 @@ class HomeFeedV2Mapper @Inject constructor(
     fun map(response: HomeFeedV2ResponseDto): List<HomeFeedSection> =
         response.items.mapNotNull { it.toSection() }
 
+    /**
+     * Maps a `GET v2/{viewAllPath}` response into a [ViewAllPage]. Unlike [map], there is
+     * no per-section truncation: view-all is the destination that shows the full item list
+     * (typically up to `limit=50`). Unsupported item kinds are dropped silently, same as
+     * the home feed mapper.
+     *
+     * Ground-truth field documentation: `.docs/03-home-feed.md §4`.
+     */
+    fun mapViewAll(response: ViewAllResponseDto): ViewAllPage =
+        ViewAllPage(
+            title = response.title,
+            subtitle = response.subtitle,
+            items = response.items.toHomeFeedItems().toImmutableList(),
+        )
+
     private fun HomeFeedV2ModuleDto.toSection(): HomeFeedSection? {
         if (title.isBlank()) return null
         if (!type.isSupportedModuleType()) return null
         val feedItems = items
             .take(MAX_ITEMS_PER_SECTION)
-            .mapNotNull { it.toHomeFeedItem() }
+            .toHomeFeedItems()
         if (feedItems.isEmpty()) return null
         return HomeFeedSection(
             title = title,
             items = feedItems.toImmutableList(),
+            viewAllPath = viewAll?.takeIf { it.isNotBlank() },
         )
     }
+
+    /** Shared item-decoding pipeline used by both [map] and [mapViewAll]. */
+    private fun List<HomeFeedV2ItemEnvelopeDto>.toHomeFeedItems(): List<HomeFeedItem> =
+        mapNotNull { it.toHomeFeedItem() }
 
     private fun String.isSupportedModuleType(): Boolean = when (this) {
         MODULE_SHORTCUT_LIST,

@@ -73,4 +73,11 @@ sealed interface HomeFeedItem {
 data class HomeFeedSection(
     val title: String,
     val items: ImmutableList<HomeFeedItem>,
+    val viewAllPath: String? = null,
+)
+
+data class ViewAllPage(
+    val title: String,
+    val subtitle: String?,
+    val items: ImmutableList<HomeFeedItem>,
 )

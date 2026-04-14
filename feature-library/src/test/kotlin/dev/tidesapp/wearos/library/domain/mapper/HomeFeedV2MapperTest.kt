@@ -3,6 +3,7 @@ package dev.tidesapp.wearos.library.domain.mapper
 import dev.tidesapp.wearos.core.domain.model.HomeFeedItem
 import dev.tidesapp.wearos.core.domain.model.HomeFeedSection
 import dev.tidesapp.wearos.library.data.dto.HomeFeedV2ResponseDto
+import dev.tidesapp.wearos.library.data.dto.ViewAllResponseDto
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -164,5 +165,123 @@ class HomeFeedV2MapperTest {
     fun `empty response yields empty list`() {
         val empty = HomeFeedV2ResponseDto()
         assertTrue(mapper.map(empty).isEmpty())
+    }
+
+    // ---------- viewAllPath propagation (TIDES-M3) ---------------------------------------------
+
+    @Test
+    fun `map populates HomeFeedSection viewAllPath when module carries viewAll`() {
+        val popular = sectionByTitle("Popular playlists")
+        assertNotNull(popular)
+        assertEquals(
+            "home/pages/POPULAR_PLAYLISTS/view-all",
+            popular!!.viewAllPath,
+        )
+        // Sanity: the BECAUSE_YOU_LISTENED_TO_ALBUM module's viewAll has a query segment and
+        // should survive intact — the repository prepends v2/ and Retrofit merges params.
+        val because = sectionByTitle("Because you listened to Sample Album")
+        assertEquals(
+            "home/pages/BECAUSE_YOU_LISTENED_TO_ALBUM/view-all?itemId=abc",
+            because?.viewAllPath,
+        )
+    }
+
+    @Test
+    fun `map leaves HomeFeedSection viewAllPath null when module has no viewAll`() {
+        val shortcuts = sectionByTitle("Shortcuts")
+        assertNotNull(shortcuts)
+        assertEquals(null, shortcuts!!.viewAllPath)
+    }
+
+    // ---------- mapViewAll ---------------------------------------------------------------------
+
+    @Test
+    fun `mapViewAll decodes every supported item kind and does not truncate`() {
+        // 8 items (more than MAX_ITEMS_PER_SECTION = 5 in home feed) to prove no truncation
+        // happens on the view-all path.
+        val raw = """
+            {
+              "title": "Popular playlists",
+              "subtitle": "Editor's picks",
+              "itemLayout": "GRID_CARD",
+              "items": [
+                { "type": "PLAYLIST", "data": {
+                    "uuid": "p-1", "type": "EDITORIAL",
+                    "creator": { "id": 0, "name": null, "picture": null, "type": "TIDAL" },
+                    "title": "Pl 1", "image": null, "squareImage": null,
+                    "promotedArtists": [{ "id": 1, "name": "Promoted", "picture": null, "type": "ARTIST", "main": true }]
+                } },
+                { "type": "PLAYLIST", "data": {
+                    "uuid": "p-2", "type": "EDITORIAL",
+                    "creator": { "id": 0, "name": "Curator", "picture": null, "type": "USER" },
+                    "title": "Pl 2", "image": null, "squareImage": null, "promotedArtists": []
+                } },
+                { "type": "PLAYLIST", "data": {
+                    "uuid": "p-3", "type": "EDITORIAL",
+                    "creator": { "id": 0, "name": "Curator", "picture": null, "type": "USER" },
+                    "title": "Pl 3", "image": null, "squareImage": null, "promotedArtists": []
+                } },
+                { "type": "PLAYLIST", "data": {
+                    "uuid": "p-4", "type": "EDITORIAL",
+                    "creator": { "id": 0, "name": "Curator", "picture": null, "type": "USER" },
+                    "title": "Pl 4", "image": null, "squareImage": null, "promotedArtists": []
+                } },
+                { "type": "PLAYLIST", "data": {
+                    "uuid": "p-5", "type": "EDITORIAL",
+                    "creator": { "id": 0, "name": "Curator", "picture": null, "type": "USER" },
+                    "title": "Pl 5", "image": null, "squareImage": null, "promotedArtists": []
+                } },
+                { "type": "PLAYLIST", "data": {
+                    "uuid": "p-6", "type": "EDITORIAL",
+                    "creator": { "id": 0, "name": "Curator", "picture": null, "type": "USER" },
+                    "title": "Pl 6", "image": null, "squareImage": null, "promotedArtists": []
+                } },
+                { "type": "PLAYLIST", "data": {
+                    "uuid": "p-7", "type": "EDITORIAL",
+                    "creator": { "id": 0, "name": "Curator", "picture": null, "type": "USER" },
+                    "title": "Pl 7", "image": null, "squareImage": null, "promotedArtists": []
+                } },
+                { "type": "PLAYLIST", "data": {
+                    "uuid": "p-8", "type": "EDITORIAL",
+                    "creator": { "id": 0, "name": "Curator", "picture": null, "type": "USER" },
+                    "title": "Pl 8", "image": null, "squareImage": null, "promotedArtists": []
+                } }
+              ]
+            }
+        """.trimIndent()
+        val response = json.decodeFromString<ViewAllResponseDto>(raw)
+        val page = mapper.mapViewAll(response)
+
+        assertEquals("Popular playlists", page.title)
+        assertEquals("Editor's picks", page.subtitle)
+        assertEquals(8, page.items.size)
+        assertTrue(page.items.all { it is HomeFeedItem.Playlist })
+    }
+
+    @Test
+    fun `mapViewAll drops unknown item kinds same as map`() {
+        val raw = """
+            {
+              "title": "Mixed",
+              "subtitle": null,
+              "itemLayout": "GRID_CARD",
+              "items": [
+                { "type": "ARTIST",   "data": { "id": 1, "name": "A" } },
+                { "type": "TRACK",    "data": { "id": 2, "title": "T" } },
+                { "type": "DEEP_LINK","data": { "title": "L", "id": "x", "url": "u" } },
+                { "type": "PLAYLIST", "data": {
+                    "uuid": "p-keep", "type": "EDITORIAL",
+                    "creator": { "id": 0, "name": "K", "picture": null, "type": "USER" },
+                    "title": "Kept", "image": null, "squareImage": null, "promotedArtists": []
+                } }
+              ]
+            }
+        """.trimIndent()
+        val response = json.decodeFromString<ViewAllResponseDto>(raw)
+        val page = mapper.mapViewAll(response)
+
+        assertEquals(1, page.items.size)
+        val pl = page.items.single() as HomeFeedItem.Playlist
+        assertEquals("p-keep", pl.id)
     }
 }

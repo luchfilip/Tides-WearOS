@@ -31,6 +31,10 @@ sealed interface HomeUiState {
 sealed interface HomeUiEvent {
     data object LoadHome : HomeUiEvent
     data class FeedItemClicked(val item: HomeFeedItem) : HomeUiEvent
+    data class SectionSeeAllClicked(
+        val viewAllPath: String,
+        val sectionTitle: String,
+    ) : HomeUiEvent
 }
 
 @Immutable
@@ -42,6 +46,10 @@ sealed interface HomeUiEffect {
         val title: String,
         val subTitle: String?,
         val imageUrl: String?,
+    ) : HomeUiEffect
+    data class NavigateToViewAll(
+        val viewAllPath: String,
+        val title: String,
     ) : HomeUiEffect
 }
 
@@ -60,6 +68,10 @@ class HomeViewModel @Inject constructor(
         when (event) {
             HomeUiEvent.LoadHome -> loadHome()
             is HomeUiEvent.FeedItemClicked -> navigateToFeedItem(event.item)
+            is HomeUiEvent.SectionSeeAllClicked -> navigateToViewAll(
+                viewAllPath = event.viewAllPath,
+                title = event.sectionTitle,
+            )
         }
     }
 
@@ -80,6 +92,12 @@ class HomeViewModel @Inject constructor(
                         message = it.message ?: "Failed to load home feed",
                     )
                 }
+        }
+    }
+
+    private fun navigateToViewAll(viewAllPath: String, title: String) {
+        viewModelScope.launch {
+            _uiEffect.send(HomeUiEffect.NavigateToViewAll(viewAllPath, title))
         }
     }
 

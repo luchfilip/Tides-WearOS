@@ -6,11 +6,13 @@ import dev.tidesapp.wearos.library.data.repository.HomeRepositoryImpl
 import dev.tidesapp.wearos.library.data.repository.MixRepositoryImpl
 import dev.tidesapp.wearos.library.data.repository.PlaylistRepositoryImpl
 import dev.tidesapp.wearos.library.data.repository.SearchRepositoryImpl
+import dev.tidesapp.wearos.library.data.repository.ViewAllRepositoryImpl
 import dev.tidesapp.wearos.library.domain.repository.AlbumRepository
 import dev.tidesapp.wearos.library.domain.repository.HomeRepository
 import dev.tidesapp.wearos.library.domain.repository.MixRepository
 import dev.tidesapp.wearos.library.domain.repository.PlaylistRepository
 import dev.tidesapp.wearos.library.domain.repository.SearchRepository
+import dev.tidesapp.wearos.library.domain.repository.ViewAllRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -37,6 +39,9 @@ abstract class LibraryRepositoryModule {
 
     @Binds
     abstract fun bindSearchRepository(impl: SearchRepositoryImpl): SearchRepository
+
+    @Binds
+    abstract fun bindViewAllRepository(impl: ViewAllRepositoryImpl): ViewAllRepository
 
     companion object {
         @Provides
