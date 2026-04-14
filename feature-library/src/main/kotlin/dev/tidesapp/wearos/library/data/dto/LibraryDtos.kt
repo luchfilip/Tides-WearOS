@@ -1,6 +1,7 @@
 package dev.tidesapp.wearos.library.data.dto
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 // =================================================================
 // Collection DTOs — cursor-based pagination (/v2/my-collection/*)
@@ -55,6 +56,51 @@ data class V1MixItemsResponseDto(
 data class V1MixItemEnvelopeDto(
     val item: TrackDataDto? = null,
     val type: String = "",
+)
+
+// =================================================================
+// v1 user favorite tracks DTO — /v1/users/{userId}/favorites/tracks
+//
+// Each entry wraps a Track in `{ created: timestamp, item: Track }`. The inner
+// `item` has the same shape as TrackDataDto (with extra fields that
+// ignoreUnknownKeys will drop).
+// =================================================================
+
+@Serializable
+data class V1FavoriteTracksResponseDto(
+    val limit: Int = 0,
+    val offset: Int = 0,
+    val totalNumberOfItems: Int = 0,
+    val items: List<V1FavoriteTrackEntryDto> = emptyList(),
+)
+
+@Serializable
+data class V1FavoriteTrackEntryDto(
+    val created: String = "",
+    val item: TrackDataDto? = null,
+)
+
+// =================================================================
+// v1 user activity DTO — /v1/users/{userId}/activity
+//
+// Each entry's `item` shape depends on the top-level `type` discriminator
+// (TRACK | PLAYLIST | ALBUM | ...). We decode `item` as a raw JsonElement and
+// let the repo layer filter to TRACK rows before deserializing the payload.
+// =================================================================
+
+@Serializable
+data class V1ActivityResponseDto(
+    val limit: Int = 0,
+    val offset: Int = 0,
+    val totalNumberOfItems: Int = 0,
+    val items: List<V1ActivityEntryDto> = emptyList(),
+)
+
+@Serializable
+data class V1ActivityEntryDto(
+    val activityType: String = "",
+    val type: String = "",
+    val item: JsonElement? = null,
 )
 
 // =================================================================

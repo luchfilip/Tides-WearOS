@@ -6,6 +6,8 @@ import dev.tidesapp.wearos.library.data.dto.CollectionPlaylistsResponseDto
 import dev.tidesapp.wearos.library.data.dto.HomeFeedV2ResponseDto
 import dev.tidesapp.wearos.library.data.dto.PlaylistDataDto
 import dev.tidesapp.wearos.library.data.dto.SearchResponseDto
+import dev.tidesapp.wearos.library.data.dto.V1ActivityResponseDto
+import dev.tidesapp.wearos.library.data.dto.V1FavoriteTracksResponseDto
 import dev.tidesapp.wearos.library.data.dto.V1MixItemsResponseDto
 import dev.tidesapp.wearos.library.data.dto.V1TrackListResponseDto
 import dev.tidesapp.wearos.library.data.dto.ViewAllResponseDto
@@ -95,6 +97,21 @@ interface TidesLibraryApi {
         @Query("offset") offset: Int = 0,
         @Query("limit") limit: Int = 50,
     ): ViewAllResponseDto
+
+    @GET("v1/users/{userId}/favorites/tracks")
+    suspend fun getUserFavoriteTracks(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: String,
+        @Query("limit") limit: Int = 9999,
+    ): V1FavoriteTracksResponseDto
+
+    @GET("v1/users/{userId}/activity")
+    suspend fun getUserActivity(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: String,
+        @Query("offset") offset: Int = 0,
+        @Query("limit") limit: Int = 50,
+    ): V1ActivityResponseDto
 
     @GET("v2/search")
     suspend fun search(
