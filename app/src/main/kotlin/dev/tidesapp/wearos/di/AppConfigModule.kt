@@ -26,4 +26,8 @@ object AppConfigModule {
     @Provides
     @Named("clientSecret")
     fun provideClientSecret(): String = BuildConfig.TIDAL_CLIENT_SECRET
+
+    @Provides
+    @Named("clientVersion")
+    fun provideClientVersion(): String = BuildConfig.TIDAL_CLIENT_VERSION
 }

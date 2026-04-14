@@ -21,6 +21,11 @@ android {
         buildConfigField("String", "TIDAL_CLIENT_SECRET", "\"${project.property("TIDAL_CLIENT_SECRET")}\"")
         buildConfigField("String", "TIDAL_API_BASE_URL", "\"${project.property("TIDAL_API_BASE_URL")}\"")
         buildConfigField("String", "TIDAL_AUTH_BASE_URL", "\"${project.property("TIDAL_AUTH_BASE_URL")}\"")
+        buildConfigField(
+            "String",
+            "TIDAL_CLIENT_VERSION",
+            "\"${project.findProperty("TIDAL_CLIENT_VERSION") ?: "2.187.0"}\""
+        )
     }
 
     buildFeatures {

@@ -1,5 +1,6 @@
 package dev.tidesapp.wearos.core.di
 
+import dev.tidesapp.wearos.core.network.TidesHeaderInterceptor
 import dev.tidesapp.wearos.core.network.TidesQueryParamsInterceptor
 import dagger.Module
 import dagger.Provides
@@ -38,9 +39,11 @@ object NetworkModule {
     fun provideOkHttpClient(
         loggingInterceptor: HttpLoggingInterceptor,
         queryParamsInterceptor: TidesQueryParamsInterceptor,
+        headerInterceptor: TidesHeaderInterceptor,
     ): OkHttpClient =
         OkHttpClient.Builder()
             .addInterceptor(queryParamsInterceptor)
+            .addInterceptor(headerInterceptor)
             .addInterceptor(loggingInterceptor)
             .callTimeout(10, TimeUnit.SECONDS)
             .build()
