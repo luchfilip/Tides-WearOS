@@ -5,7 +5,6 @@ import android.util.Base64
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
@@ -23,16 +22,15 @@ import dev.tidesapp.wearos.player.R
 import dev.tidesapp.wearos.player.data.api.TidesPlaybackApi
 import dev.tidesapp.wearos.player.data.dto.BtsManifest
 import dev.tidesapp.wearos.player.playback.MusicServiceController
-import java.util.concurrent.ConcurrentHashMap
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
 class WearMusicService : MediaSessionService() {
@@ -42,7 +40,6 @@ class WearMusicService : MediaSessionService() {
     private lateinit var serviceController: MusicServiceController
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var callbackScope: CoroutineScope? = null
-    private var lookaheadListener: Player.Listener? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -86,18 +83,6 @@ class WearMusicService : MediaSessionService() {
             )
             .build()
 
-        // Pre-resolve the upcoming stub as playback advances so skip-next is
-        // instant. Also covers the "user skipped past the pre-fetch" edge case
-        // by resolving the current item in-place if it is still a stub.
-        val listener = LookaheadResolveListener(
-            resolver = resolver,
-            mainScope = serviceScope,
-            ioDispatcher = ioDispatcher,
-            playerProvider = { player },
-        )
-        exoPlayer.addListener(listener)
-        lookaheadListener = listener
-
         setMediaNotificationProvider(
             DefaultMediaNotificationProvider.Builder(this)
                 .setChannelId(NOTIFICATION_CHANNEL_ID)
@@ -123,10 +108,6 @@ class WearMusicService : MediaSessionService() {
         serviceController.onDestroy()
         callbackScope?.cancel()
         callbackScope = null
-        lookaheadListener?.let { listener ->
-            player?.removeListener(listener)
-        }
-        lookaheadListener = null
         mediaSession?.run {
             player.release()
             release()
@@ -157,11 +138,6 @@ class WearMusicService : MediaSessionService() {
  * Resolves a stub [MediaItem] into a playable one by fetching a TIDAL playback
  * URL just-in-time. Plain Kotlin, no Android deps beyond [Base64] which is
  * stubbed by Android's JVM unit-test runtime.
- *
- * If resolution fails at any step (blank id, credentials, API, manifest
- * decode), the original stub is returned so the caller can decide whether to
- * let Media3 fail-fast or skip the item. Callers generally wrap this in
- * `runCatching` and fall back to the stub on failure.
  */
 internal class TrackResolver(
     private val playbackApi: TidesPlaybackApi,
@@ -223,15 +199,24 @@ internal class TrackResolver(
 }
 
 /**
- * [MediaSession.Callback] that resolves **only** the starting track's playback
- * URI inside [onSetMediaItems]. All other items pass through unchanged as
- * stubs and are resolved on-demand by [LookaheadResolveListener] as playback
- * advances. This slashes startup latency from ~15-20s (for a 20-track
- * playlist, sequential round-trips) to ~1s (one round-trip).
+ * [MediaSession.Callback] that resolves every incoming [MediaItem]'s playback
+ * URI **in parallel** inside [onSetMediaItems] before returning the future.
  *
- * If the start item fails to resolve we set the future with the untouched
- * list so Media3 attempts and fails the stub — the user gets a fail-fast
- * error instead of a mystery hang.
+ * Why fully resolved and not lazy? Media3's `DefaultMediaSourceFactory` builds
+ * a `MediaSource` for every item in the queue at `setMediaItems` time (not
+ * lazily on-demand), and NPEs on any item with a null `localConfiguration`.
+ * So we MUST NOT hand it stubs — lazy/listener-based resolution is a
+ * non-starter with the default source factory. Parallel resolution keeps
+ * startup at ~1s for a 20-track queue instead of the ~15-20s that sequential
+ * resolution produced.
+ *
+ * OkHttp's default `maxRequestsPerHost = 5` naturally caps concurrency against
+ * the TIDAL API host, so we don't need our own semaphore.
+ *
+ * Items that fail to resolve are dropped from the queue rather than left as
+ * stubs (which would re-trigger the source-factory NPE). The originally
+ * requested `startIndex` is re-mapped to the new position of the start item
+ * inside the filtered list.
  */
 internal class TrackResolvingCallback(
     private val resolver: TrackResolver,
@@ -243,10 +228,8 @@ internal class TrackResolvingCallback(
         controller: MediaSession.ControllerInfo,
         mediaItems: List<MediaItem>,
     ): ListenableFuture<List<MediaItem>> {
-        // onAddMediaItems is kept contract-consistent: return items unchanged.
-        // The app currently always enters through setMediaItems (with a start
-        // index); this override handles the theoretical case of a controller
-        // calling addMediaItems without a start position.
+        // The app currently always enters via setMediaItems; keep this hook
+        // contract-consistent by passing items through unchanged.
         return Futures.immediateFuture(mediaItems)
     }
 
@@ -271,119 +254,46 @@ internal class TrackResolvingCallback(
             return future
         }
 
-        val effectiveStartIndex = if (startIndex == C.INDEX_UNSET) {
+        val requestedStartIndex = if (startIndex == C.INDEX_UNSET) {
             0
         } else {
             startIndex.coerceIn(0, mediaItems.lastIndex)
         }
 
         scope.launch {
-            val startStub = mediaItems[effectiveStartIndex]
-            val resolvedList = runCatching { resolver.resolve(startStub) }
-                .fold(
-                    onSuccess = { resolved ->
-                        mediaItems.toMutableList().also { list ->
-                            list[effectiveStartIndex] = resolved
-                        }
-                    },
-                    onFailure = {
-                        // Pass through — Media3 will fail fast on the stub
-                        // and the user sees an error instead of a hang.
-                        mediaItems
-                    },
-                )
+            // Resolve all items in parallel. Failures become nulls so we can
+            // drop them without leaving stubs in the queue.
+            val resolved: List<MediaItem?> = coroutineScope {
+                mediaItems.map { stub ->
+                    async { runCatching { resolver.resolve(stub) }.getOrNull() }
+                }.awaitAll()
+            }
+
+            val playable = mutableListOf<MediaItem>()
+            var newStartIndex = -1
+            resolved.forEachIndexed { originalIdx, item ->
+                if (item != null) {
+                    if (originalIdx == requestedStartIndex) {
+                        newStartIndex = playable.size
+                    }
+                    playable.add(item)
+                }
+            }
+
+            // If the originally requested start item failed, the start index
+            // collapses to the first successfully resolved item (or 0 if the
+            // whole list failed — Media3 will then report an empty queue).
+            if (newStartIndex < 0) newStartIndex = 0
 
             future.set(
                 MediaSession.MediaItemsWithStartPosition(
-                    resolvedList,
-                    effectiveStartIndex,
+                    playable.toList(),
+                    newStartIndex,
                     startPositionMs,
                 ),
             )
         }
 
         return future
-    }
-}
-
-/**
- * [Player.Listener] that, on every media-item transition, pre-resolves the
- * next stub in the queue so skip-next is instant. Also resolves the current
- * item in place if it is still a stub — covers the edge case where the user
- * skipped forward past the pre-fetch window.
- *
- * A [ConcurrentHashMap] of in-flight deferreds keyed by `mediaId` dedupes
- * concurrent resolves of the same track (e.g. rapid skip-next taps).
- */
-internal class LookaheadResolveListener(
-    private val resolver: TrackResolver,
-    private val mainScope: CoroutineScope,
-    private val ioDispatcher: CoroutineDispatcher,
-    private val playerProvider: () -> Player?,
-) : Player.Listener {
-
-    private val inFlight = ConcurrentHashMap<String, Deferred<MediaItem>>()
-
-    override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-        val player = playerProvider() ?: return
-        val currentIndex = player.currentMediaItemIndex
-        if (currentIndex < 0 || currentIndex >= player.mediaItemCount) return
-
-        // 1. Fallback: the current item itself is still a stub (user skipped
-        //    past the pre-fetch). Resolve + replace in place. Media3 restarts
-        //    playback on that item with the new URI.
-        val currentItem = runCatching { player.getMediaItemAt(currentIndex) }.getOrNull()
-        if (currentItem != null && currentItem.localConfiguration?.uri == null) {
-            resolveAndReplace(currentIndex, currentItem)
-        }
-
-        // 2. Lookahead: pre-resolve the next stub, if any.
-        val nextIndex = currentIndex + 1
-        if (nextIndex < player.mediaItemCount) {
-            val nextItem = runCatching { player.getMediaItemAt(nextIndex) }.getOrNull()
-            if (nextItem != null && nextItem.localConfiguration?.uri == null) {
-                resolveAndReplace(nextIndex, nextItem)
-            }
-        }
-    }
-
-    private fun resolveAndReplace(index: Int, stub: MediaItem) {
-        val key = stub.mediaId.ifBlank { return }
-        // computeIfAbsent dedupes concurrent resolves of the same track.
-        val deferred = inFlight.computeIfAbsent(key) {
-            val result = CompletableDeferred<MediaItem>()
-            mainScope.launch {
-                val resolved = runCatching {
-                    withContext(ioDispatcher) { resolver.resolve(stub) }
-                }.getOrElse {
-                    // Swallow — Media3 will naturally skip the stub when it
-                    // hits it. No logging framework in the project.
-                    inFlight.remove(key)
-                    result.complete(stub)
-                    return@launch
-                }
-
-                val player = playerProvider()
-                if (player != null && index < player.mediaItemCount) {
-                    val currentAtIndex = runCatching {
-                        player.getMediaItemAt(index)
-                    }.getOrNull()
-                    // Only replace if the slot still holds our stub (the queue
-                    // may have shifted while we were resolving).
-                    if (currentAtIndex?.mediaId == key &&
-                        currentAtIndex.localConfiguration?.uri == null
-                    ) {
-                        player.replaceMediaItem(index, resolved)
-                    }
-                }
-                inFlight.remove(key)
-                result.complete(resolved)
-            }
-            result
-        }
-        // Reference the deferred to keep the compiler happy and document
-        // intent — callers may await it in the future if needed.
-        @Suppress("UNUSED_VARIABLE")
-        val ignored = deferred
     }
 }

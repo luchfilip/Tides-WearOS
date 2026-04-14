@@ -4,7 +4,6 @@ import android.net.Uri
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaSession
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -13,23 +12,23 @@ import io.mockk.mockkStatic
 import io.mockk.slot
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
 /**
- * Unit tests for [TrackResolvingCallback]. The key invariant under test is:
- * `onSetMediaItems` resolves ONLY the start item, leaving all other items as
- * stubs (which [LookaheadResolveListener] picks up as playback progresses).
- * This is what drops playback-startup latency from ~15-20s to ~1s.
+ * Unit tests for [TrackResolvingCallback]. The key invariant under test:
+ * `onSetMediaItems` resolves EVERY item in parallel and returns them all with
+ * the original start index. Items that fail to resolve are dropped from the
+ * queue (never left as stubs — that would re-trigger Media3's
+ * `DefaultMediaSourceFactory` NPE on null localConfiguration).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class TrackResolvingCallbackTest {
@@ -63,59 +62,13 @@ class TrackResolvingCallbackTest {
         .build()
 
     @Test
-    fun `onSetMediaItems resolves only the startIndex item and leaves others as stubs`() =
-        runTest {
-            val dispatcher = StandardTestDispatcher(testScheduler)
-            val resolver: TrackResolver = mockk()
-            val stubs = (0 until 5).map { stub("track-$it") }
-            coEvery { resolver.resolve(stubs[2]) } returns resolved("track-2")
-
-            val callback = TrackResolvingCallback(
-                resolver = resolver,
-                scope = CoroutineScope(dispatcher),
-            )
-
-            val future = callback.onSetMediaItems(
-                mediaSession = mediaSession,
-                controller = controllerInfo,
-                mediaItems = stubs,
-                startIndex = 2,
-                startPositionMs = 12_345L,
-            )
-            advanceUntilIdle()
-
-            assertTrue(future.isDone)
-            val result = future.get()
-            assertEquals(2, result.startIndex)
-            assertEquals(12_345L, result.startPositionMs)
-            assertEquals(5, result.mediaItems.size)
-
-            // The start item was resolved — now has a URI.
-            assertNotNull(result.mediaItems[2].localConfiguration)
-            assertEquals(
-                "https://cdn.tidal/track-2.m4a",
-                result.mediaItems[2].localConfiguration!!.uri.toString(),
-            )
-
-            // All other items passed through untouched (still stubs, no URI).
-            listOf(0, 1, 3, 4).forEach { i ->
-                assertNull(
-                    "item $i should still be a stub",
-                    result.mediaItems[i].localConfiguration,
-                )
-                assertSame(stubs[i], result.mediaItems[i])
-            }
-
-            // Crucially, only one resolve() call — not five.
-            coVerify(exactly = 1) { resolver.resolve(any()) }
-        }
-
-    @Test
-    fun `onSetMediaItems returns untouched list when start item resolve fails`() = runTest {
+    fun `onSetMediaItems resolves every item in parallel and preserves start index`() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val resolver: TrackResolver = mockk()
-        val stubs = listOf(stub("a"), stub("b"))
-        coEvery { resolver.resolve(any()) } throws RuntimeException("boom")
+        val stubs = (0 until 5).map { stub("track-$it") }
+        stubs.forEachIndexed { i, s ->
+            coEvery { resolver.resolve(s) } returns resolved("track-$i")
+        }
 
         val callback = TrackResolvingCallback(
             resolver = resolver,
@@ -123,24 +76,92 @@ class TrackResolvingCallbackTest {
         )
 
         val future = callback.onSetMediaItems(
-            mediaSession, controllerInfo, stubs, startIndex = 0, startPositionMs = 0L,
+            mediaSession = mediaSession,
+            controller = controllerInfo,
+            mediaItems = stubs,
+            startIndex = 2,
+            startPositionMs = 12_345L,
+        )
+        advanceUntilIdle()
+
+        assertTrue(future.isDone)
+        val result = future.get()
+        assertEquals(2, result.startIndex)
+        assertEquals(12_345L, result.startPositionMs)
+        assertEquals(5, result.mediaItems.size)
+
+        // Every item has a URI — no stubs in the queue.
+        result.mediaItems.forEachIndexed { i, item ->
+            assertNotNull("item $i should be resolved", item.localConfiguration)
+            assertEquals(
+                "https://cdn.tidal/track-$i.m4a",
+                item.localConfiguration!!.uri.toString(),
+            )
+        }
+
+        coVerify(exactly = 5) { resolver.resolve(any()) }
+    }
+
+    @Test
+    fun `onSetMediaItems drops failed items and remaps start index`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val resolver: TrackResolver = mockk()
+        val stubs = listOf(stub("a"), stub("b"), stub("c"), stub("d"))
+        // Drop index 1. Start was 2 → new start should be 1 (one item removed before it).
+        coEvery { resolver.resolve(stubs[0]) } returns resolved("a")
+        coEvery { resolver.resolve(stubs[1]) } throws RuntimeException("410 gone")
+        coEvery { resolver.resolve(stubs[2]) } returns resolved("c")
+        coEvery { resolver.resolve(stubs[3]) } returns resolved("d")
+
+        val callback = TrackResolvingCallback(
+            resolver = resolver,
+            scope = CoroutineScope(dispatcher),
+        )
+
+        val future = callback.onSetMediaItems(
+            mediaSession, controllerInfo, stubs, startIndex = 2, startPositionMs = 0L,
         )
         advanceUntilIdle()
 
         val result = future.get()
-        assertEquals(2, result.mediaItems.size)
-        // Untouched — Media3 will fail-fast on the stub; user sees error,
-        // not a mystery hang.
-        assertNull(result.mediaItems[0].localConfiguration)
-        assertNull(result.mediaItems[1].localConfiguration)
+        assertEquals(3, result.mediaItems.size)
+        assertEquals(1, result.startIndex)
+        assertEquals("c", result.mediaItems[result.startIndex].mediaId)
+        // Every surviving item has a URI.
+        result.mediaItems.forEach { assertNotNull(it.localConfiguration) }
     }
 
     @Test
-    fun `onSetMediaItems coerces INDEX_UNSET to zero and resolves first item`() = runTest {
+    fun `onSetMediaItems collapses start index when the start item itself fails`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val resolver: TrackResolver = mockk()
+        val stubs = listOf(stub("a"), stub("b"))
+        coEvery { resolver.resolve(stubs[0]) } returns resolved("a")
+        coEvery { resolver.resolve(stubs[1]) } throws RuntimeException("boom")
+
+        val callback = TrackResolvingCallback(
+            resolver = resolver,
+            scope = CoroutineScope(dispatcher),
+        )
+
+        val future = callback.onSetMediaItems(
+            mediaSession, controllerInfo, stubs, startIndex = 1, startPositionMs = 0L,
+        )
+        advanceUntilIdle()
+
+        val result = future.get()
+        assertEquals(1, result.mediaItems.size)
+        assertEquals("a", result.mediaItems[0].mediaId)
+        assertEquals(0, result.startIndex)
+    }
+
+    @Test
+    fun `onSetMediaItems coerces INDEX_UNSET to zero`() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val resolver: TrackResolver = mockk()
         val stubs = listOf(stub("first"), stub("second"))
         coEvery { resolver.resolve(stubs[0]) } returns resolved("first")
+        coEvery { resolver.resolve(stubs[1]) } returns resolved("second")
 
         val callback = TrackResolvingCallback(
             resolver = resolver,
@@ -156,8 +177,7 @@ class TrackResolvingCallbackTest {
 
         val result = future.get()
         assertEquals(0, result.startIndex)
-        assertNotNull(result.mediaItems[0].localConfiguration)
-        assertNull(result.mediaItems[1].localConfiguration)
+        assertEquals(2, result.mediaItems.size)
     }
 
     @Test
