@@ -21,7 +21,8 @@ interface ProbeApi {
     @GET("v2/home/feed/STATIC")
     suspend fun probeHomeV2(
         @Header("Authorization") token: String,
-        @Query("refreshId") refreshId: String,
+        @Query("refreshId") refreshId: Long,
+        @Query("timeOffset") timeOffset: String,
         @Query("limit") limit: Int = 20,
     ): Response<ResponseBody>
 
@@ -29,6 +30,8 @@ interface ProbeApi {
     suspend fun probeViewAll(
         @Header("Authorization") token: String,
         @Path("section") section: String,
+        @Query("refreshId") refreshId: Long,
+        @Query("timeOffset") timeOffset: String,
         @Query("offset") offset: Int = 0,
         @Query("limit") limit: Int = 50,
     ): Response<ResponseBody>

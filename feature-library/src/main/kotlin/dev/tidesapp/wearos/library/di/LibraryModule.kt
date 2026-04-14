@@ -16,6 +16,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import retrofit2.Retrofit
+import java.time.Clock
+import java.time.ZoneId
 import javax.inject.Singleton
 
 @Module
@@ -47,5 +49,16 @@ abstract class LibraryRepositoryModule {
         fun provideProbeApi(retrofit: Retrofit): ProbeApi {
             return retrofit.create(ProbeApi::class.java)
         }
+
+        // THROWAWAY: delete in TIDES-M2E with HomeV2Prober.
+        // HomeV2Prober consumes these to compute refreshId (millis) and timeOffset
+        // (±HH:MM) for v2 home requests. Tests inject fakes via its constructor.
+        @Provides
+        @Singleton
+        fun provideClock(): Clock = Clock.systemDefaultZone()
+
+        @Provides
+        @Singleton
+        fun provideZoneId(): ZoneId = ZoneId.systemDefault()
     }
 }

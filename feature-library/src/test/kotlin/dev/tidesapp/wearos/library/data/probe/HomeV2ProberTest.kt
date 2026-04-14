@@ -20,6 +20,10 @@ import org.junit.Before
 import org.junit.Test
 import retrofit2.Response
 import java.io.IOException
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeV2ProberTest {
@@ -27,6 +31,14 @@ class HomeV2ProberTest {
     private lateinit var probeApi: ProbeApi
     private lateinit var credentialsProvider: CredentialsProvider
     private lateinit var prober: HomeV2Prober
+
+    // Fixed clock + zone so we can assert exact refreshId / timeOffset values.
+    // 2026-04-14T12:34:56Z in New York (UTC-04:00 during DST).
+    private val fixedInstant: Instant = Instant.parse("2026-04-14T12:34:56Z")
+    private val fixedClock: Clock = Clock.fixed(fixedInstant, ZoneOffset.UTC)
+    private val nyZone: ZoneId = ZoneId.of("America/New_York")
+    private val expectedRefreshId: Long = fixedInstant.toEpochMilli()
+    private val expectedTimeOffset: String = "-04:00"
 
     @Before
     fun setup() {
@@ -38,19 +50,19 @@ class HomeV2ProberTest {
                 }
             }
         }
-        prober = HomeV2Prober(probeApi, credentialsProvider)
+        prober = HomeV2Prober(probeApi, credentialsProvider, fixedClock, nyZone)
     }
 
     @Test
     fun `runAll returns 200 happy-path results for probes 1 and 2 when playlistUuid is null`() = runTest {
-        coEvery { probeApi.probeHomeV2(any(), any(), any()) } returns okResponse(
+        coEvery { probeApi.probeHomeV2(any(), any(), any(), any()) } returns okResponse(
             body = "{\"uuid\":\"abc\"}",
             headers = Headers.headersOf(
                 "tidal-correlation-id", "corr-1",
                 "Content-Type", "application/json",
             ),
         )
-        coEvery { probeApi.probeViewAll(any(), any(), any(), any()) } returns okResponse(
+        coEvery { probeApi.probeViewAll(any(), any(), any(), any(), any(), any()) } returns okResponse(
             body = "{\"items\":[]}",
             headers = Headers.headersOf("tidal-request-id", "req-2"),
         )
@@ -76,19 +88,29 @@ class HomeV2ProberTest {
     }
 
     @Test
-    fun `runAll sends Bearer token assembled from credentials`() = runTest {
-        coEvery { probeApi.probeHomeV2(any(), any(), any()) } returns okResponse("{}")
-        coEvery { probeApi.probeViewAll(any(), any(), any(), any()) } returns okResponse("{}")
+    fun `runAll sends Bearer token and correct refreshId and timeOffset to both probes`() = runTest {
+        coEvery { probeApi.probeHomeV2(any(), any(), any(), any()) } returns okResponse("{}")
+        coEvery { probeApi.probeViewAll(any(), any(), any(), any(), any(), any()) } returns okResponse("{}")
 
         prober.runAll()
 
+        // Both probes in a single refresh cycle MUST share the same refreshId —
+        // .docs/03-home-feed.md §2.1: "the app reuses the exact same refreshId
+        // for every home-related call in the same refresh".
         coVerify(exactly = 1) {
-            probeApi.probeHomeV2(token = "Bearer test-jwt-token", refreshId = any(), limit = 20)
+            probeApi.probeHomeV2(
+                token = "Bearer test-jwt-token",
+                refreshId = expectedRefreshId,
+                timeOffset = expectedTimeOffset,
+                limit = 20,
+            )
         }
         coVerify(exactly = 1) {
             probeApi.probeViewAll(
                 token = "Bearer test-jwt-token",
                 section = "POPULAR_PLAYLISTS",
+                refreshId = expectedRefreshId,
+                timeOffset = expectedTimeOffset,
                 offset = 0,
                 limit = 50,
             )
@@ -96,9 +118,31 @@ class HomeV2ProberTest {
     }
 
     @Test
+    fun `currentTimeOffset formats positive offsets with plus sign`() {
+        val plus0530 = HomeV2Prober(
+            probeApi,
+            credentialsProvider,
+            Clock.fixed(fixedInstant, ZoneOffset.UTC),
+            ZoneId.of("Asia/Kolkata"), // +05:30
+        )
+        assertEquals("+05:30", plus0530.currentTimeOffset())
+    }
+
+    @Test
+    fun `currentTimeOffset formats UTC as plus zero`() {
+        val utc = HomeV2Prober(
+            probeApi,
+            credentialsProvider,
+            Clock.fixed(fixedInstant, ZoneOffset.UTC),
+            ZoneOffset.UTC,
+        )
+        assertEquals("+00:00", utc.currentTimeOffset())
+    }
+
+    @Test
     fun `runAll includes probe 3 when playlistUuid is provided`() = runTest {
-        coEvery { probeApi.probeHomeV2(any(), any(), any()) } returns okResponse("{}")
-        coEvery { probeApi.probeViewAll(any(), any(), any(), any()) } returns okResponse("{}")
+        coEvery { probeApi.probeHomeV2(any(), any(), any(), any()) } returns okResponse("{}")
+        coEvery { probeApi.probeViewAll(any(), any(), any(), any(), any(), any()) } returns okResponse("{}")
         coEvery { probeApi.probeUserPlaylist(any(), any()) } returns okResponse("{\"id\":\"pl-1\"}")
 
         val results = prober.runAll(playlistUuid = "pl-1")
@@ -113,8 +157,8 @@ class HomeV2ProberTest {
 
     @Test
     fun `runAll skips probe 3 when playlistUuid is null`() = runTest {
-        coEvery { probeApi.probeHomeV2(any(), any(), any()) } returns okResponse("{}")
-        coEvery { probeApi.probeViewAll(any(), any(), any(), any()) } returns okResponse("{}")
+        coEvery { probeApi.probeHomeV2(any(), any(), any(), any()) } returns okResponse("{}")
+        coEvery { probeApi.probeViewAll(any(), any(), any(), any(), any(), any()) } returns okResponse("{}")
 
         val results = prober.runAll(playlistUuid = null)
 
@@ -124,8 +168,8 @@ class HomeV2ProberTest {
 
     @Test
     fun `runAll surfaces 401 as a status without throwing`() = runTest {
-        coEvery { probeApi.probeHomeV2(any(), any(), any()) } returns errorResponse(401, "unauthorized")
-        coEvery { probeApi.probeViewAll(any(), any(), any(), any()) } returns okResponse("{}")
+        coEvery { probeApi.probeHomeV2(any(), any(), any(), any()) } returns errorResponse(401, "unauthorized")
+        coEvery { probeApi.probeViewAll(any(), any(), any(), any(), any(), any()) } returns okResponse("{}")
 
         val results = prober.runAll()
 
@@ -139,8 +183,8 @@ class HomeV2ProberTest {
 
     @Test
     fun `runAll surfaces 403 as a status without throwing`() = runTest {
-        coEvery { probeApi.probeHomeV2(any(), any(), any()) } returns okResponse("{}")
-        coEvery { probeApi.probeViewAll(any(), any(), any(), any()) } returns errorResponse(403, "forbidden")
+        coEvery { probeApi.probeHomeV2(any(), any(), any(), any()) } returns okResponse("{}")
+        coEvery { probeApi.probeViewAll(any(), any(), any(), any(), any(), any()) } returns errorResponse(403, "forbidden")
 
         val results = prober.runAll()
 
@@ -152,8 +196,8 @@ class HomeV2ProberTest {
 
     @Test
     fun `runAll isolates per-probe network exceptions and completes remaining probes`() = runTest {
-        coEvery { probeApi.probeHomeV2(any(), any(), any()) } throws IOException("connection reset")
-        coEvery { probeApi.probeViewAll(any(), any(), any(), any()) } returns okResponse("{\"ok\":true}")
+        coEvery { probeApi.probeHomeV2(any(), any(), any(), any()) } throws IOException("connection reset")
+        coEvery { probeApi.probeViewAll(any(), any(), any(), any(), any(), any()) } returns okResponse("{\"ok\":true}")
 
         val results = prober.runAll()
 
@@ -187,16 +231,16 @@ class HomeV2ProberTest {
 
         assertEquals(1, results.size)
         assertEquals("no credentials", results[0].error)
-        coVerify(exactly = 0) { probeApi.probeHomeV2(any(), any(), any()) }
-        coVerify(exactly = 0) { probeApi.probeViewAll(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { probeApi.probeHomeV2(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { probeApi.probeViewAll(any(), any(), any(), any(), any(), any()) }
         coVerify(exactly = 0) { probeApi.probeUserPlaylist(any(), any()) }
     }
 
     @Test
     fun `runAll truncates body preview to 2048 chars`() = runTest {
         val big = "x".repeat(5000)
-        coEvery { probeApi.probeHomeV2(any(), any(), any()) } returns okResponse(big)
-        coEvery { probeApi.probeViewAll(any(), any(), any(), any()) } returns okResponse("{}")
+        coEvery { probeApi.probeHomeV2(any(), any(), any(), any()) } returns okResponse(big)
+        coEvery { probeApi.probeViewAll(any(), any(), any(), any(), any(), any()) } returns okResponse("{}")
 
         val results = prober.runAll()
 
