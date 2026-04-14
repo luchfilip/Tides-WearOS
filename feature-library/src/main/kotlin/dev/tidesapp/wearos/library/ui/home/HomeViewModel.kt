@@ -5,8 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.tidesapp.wearos.core.domain.model.HomeFeedItem
 import dev.tidesapp.wearos.core.domain.model.HomeFeedSection
-import dev.tidesapp.wearos.library.data.probe.HomeV2Prober
-import dev.tidesapp.wearos.library.data.probe.ProbeResult
 import dev.tidesapp.wearos.library.domain.repository.HomeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.ImmutableList
@@ -33,24 +31,17 @@ sealed interface HomeUiState {
 sealed interface HomeUiEvent {
     data object LoadHome : HomeUiEvent
     data class FeedItemClicked(val item: HomeFeedItem) : HomeUiEvent
-
-    // THROWAWAY: delete in TIDES-M2E after home v2 migration completes.
-    data class DebugProbeRequested(val playlistUuid: String? = null) : HomeUiEvent
 }
 
 @Immutable
 sealed interface HomeUiEffect {
     data class NavigateToAlbum(val albumId: String) : HomeUiEffect
     data class NavigateToPlaylist(val playlistId: String) : HomeUiEffect
-
-    // THROWAWAY: delete in TIDES-M2E after home v2 migration completes.
-    data class DebugProbeResult(val results: List<ProbeResult>) : HomeUiEffect
 }
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val homeRepository: HomeRepository,
-    private val homeV2Prober: HomeV2Prober,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Initial)
@@ -63,15 +54,6 @@ class HomeViewModel @Inject constructor(
         when (event) {
             HomeUiEvent.LoadHome -> loadHome()
             is HomeUiEvent.FeedItemClicked -> navigateToFeedItem(event.item)
-            is HomeUiEvent.DebugProbeRequested -> runDebugProbe(event.playlistUuid)
-        }
-    }
-
-    // THROWAWAY: delete in TIDES-M2E after home v2 migration completes.
-    private fun runDebugProbe(playlistUuid: String?) {
-        viewModelScope.launch {
-            val results = homeV2Prober.runAll(playlistUuid)
-            _uiEffect.send(HomeUiEffect.DebugProbeResult(results))
         }
     }
 

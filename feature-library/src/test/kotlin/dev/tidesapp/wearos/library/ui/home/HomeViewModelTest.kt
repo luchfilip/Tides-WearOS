@@ -3,12 +3,7 @@ package dev.tidesapp.wearos.library.ui.home
 import app.cash.turbine.test
 import dev.tidesapp.wearos.core.domain.model.HomeFeedItem
 import dev.tidesapp.wearos.core.domain.model.HomeFeedSection
-import dev.tidesapp.wearos.library.data.probe.HomeV2Prober
-import dev.tidesapp.wearos.library.data.probe.ProbeResult
 import dev.tidesapp.wearos.library.domain.repository.HomeRepository
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.mockk
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -28,12 +23,10 @@ class HomeViewModelTest {
 
     private lateinit var viewModel: HomeViewModel
     private val testDispatcher = StandardTestDispatcher()
-    private val noopProber: HomeV2Prober = mockk(relaxed = true)
 
     private fun buildViewModel(
         repository: HomeRepository,
-        prober: HomeV2Prober = noopProber,
-    ): HomeViewModel = HomeViewModel(repository, prober)
+    ): HomeViewModel = HomeViewModel(repository)
 
     private val fakeSections = listOf(
         HomeFeedSection(
@@ -133,51 +126,6 @@ class HomeViewModelTest {
             assertTrue(effect is HomeUiEffect.NavigateToPlaylist)
             assertEquals("playlist-1", (effect as HomeUiEffect.NavigateToPlaylist).playlistId)
         }
-    }
-
-    @Test
-    fun `DebugProbeRequested emits DebugProbeResult effect with prober results`() = runTest {
-        val fakeResults = listOf(
-            ProbeResult(
-                endpoint = "v2/home/feed/STATIC",
-                status = 200,
-                tidalHeaders = mapOf("tidal-correlation-id" to "abc"),
-                bodyPreview = "{\"uuid\":\"x\"}",
-            ),
-            ProbeResult(
-                endpoint = "v2/home/pages/POPULAR_PLAYLISTS/view-all",
-                status = 200,
-                tidalHeaders = emptyMap(),
-                bodyPreview = "{}",
-            ),
-        )
-        val prober: HomeV2Prober = mockk()
-        coEvery { prober.runAll(null) } returns fakeResults
-
-        viewModel = buildViewModel(FakeHomeRepository(), prober)
-
-        viewModel.uiEffect.test {
-            viewModel.onEvent(HomeUiEvent.DebugProbeRequested())
-            val effect = awaitItem()
-            assertTrue(effect is HomeUiEffect.DebugProbeResult)
-            assertEquals(fakeResults, (effect as HomeUiEffect.DebugProbeResult).results)
-        }
-        coVerify(exactly = 1) { prober.runAll(null) }
-    }
-
-    @Test
-    fun `DebugProbeRequested forwards playlistUuid to prober`() = runTest {
-        val prober: HomeV2Prober = mockk()
-        coEvery { prober.runAll("pl-42") } returns emptyList()
-
-        viewModel = buildViewModel(FakeHomeRepository(), prober)
-
-        viewModel.uiEffect.test {
-            viewModel.onEvent(HomeUiEvent.DebugProbeRequested(playlistUuid = "pl-42"))
-            val effect = awaitItem()
-            assertTrue(effect is HomeUiEffect.DebugProbeResult)
-        }
-        coVerify(exactly = 1) { prober.runAll("pl-42") }
     }
 
     private class FakeHomeRepository(
