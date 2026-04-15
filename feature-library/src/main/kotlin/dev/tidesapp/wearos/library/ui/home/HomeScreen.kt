@@ -1,13 +1,21 @@
 package dev.tidesapp.wearos.library.ui.home
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.wear.compose.material.CompactChip
+import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.google.android.horologist.compose.layout.ScalingLazyColumn
@@ -140,6 +148,10 @@ private fun HomeList(
                         text = section.title,
                         style = MaterialTheme.typography.title3,
                         color = MaterialTheme.colors.primary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
                     )
                 }
             }
@@ -159,18 +171,30 @@ private fun HomeList(
             val viewAllPath = section.viewAllPath
             if (viewAllPath != null) {
                 item {
-                    TidesChip(
-                        label = "See all",
-                        onClick = {
-                            onEvent(
-                                HomeUiEvent.SectionSeeAllClicked(
-                                    viewAllPath = viewAllPath,
-                                    sectionTitle = section.title,
-                                ),
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset(y = (-10).dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CompactChip(
+                            onClick = {
+                                onEvent(
+                                    HomeUiEvent.SectionSeeAllClicked(
+                                        viewAllPath = viewAllPath,
+                                        sectionTitle = section.title,
+                                    ),
+                                )
+                            },
+                            label = {
+                                Text(
+                                    text = "See all",
+                                    style = MaterialTheme.typography.caption2,
+                                )
+                            },
+                            colors = ChipDefaults.childChipColors(),
+                        )
+                    }
                 }
             }
         }
