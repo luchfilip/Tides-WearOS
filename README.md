@@ -4,6 +4,10 @@ An unofficial Tidal client for Wear OS, built with Kotlin and Jetpack Compose.
 
 > **Disclaimer:** This project is not affiliated with, endorsed by, or connected to TIDAL, Block Inc., or any of their subsidiaries. "Tidal" is a trademark of Block Inc. This app requires an active Tidal subscription. Use at your own risk.
 
+## Demo
+
+https://github.com/user-attachments/assets/7adf29ef-2327-40ef-b461-9463c7a94e71
+
 ## Screenshots
 
 <p align="center">
