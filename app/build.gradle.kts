@@ -34,8 +34,8 @@ android {
         applicationId = "dev.tidesapp.wearos"
         minSdk = 30
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         // Use findProperty(...) rather than property(...) so fresh clones without a
         // populated gradle.properties still build (the SDK will fail at runtime on
