@@ -20,7 +20,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "tidal-wearos"
+rootProject.name = "tides-wearos"
 include(":app")
 include(":core")
 include(":feature-auth")
