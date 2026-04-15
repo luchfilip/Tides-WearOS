@@ -6,7 +6,22 @@ An unofficial Tidal client for Wear OS, built with Kotlin and Jetpack Compose.
 
 ## Screenshots
 
-<!-- TODO: Add screenshots -->
+<p align="center">
+  <img src="docs/screenshots/album.png" width="360" alt="Album view" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/home_top.png" width="160" alt="Home" />
+  <img src="docs/screenshots/home_scrolled.png" width="160" alt="Home scrolled" />
+  <img src="docs/screenshots/home_scrolled_mixes.png" width="160" alt="Mixes" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/library.png" width="160" alt="Library" />
+  <img src="docs/screenshots/mix.png" width="160" alt="Mix detail" />
+  <img src="docs/screenshots/now_playing.png" width="160" alt="Now playing" />
+  <img src="docs/screenshots/search.png" width="160" alt="Search" />
+</p>
 
 ## Features
 
@@ -28,7 +43,7 @@ An unofficial Tidal client for Wear OS, built with Kotlin and Jetpack Compose.
 
 ## Architecture
 
-The project follows Clean Architecture with MVI pattern, organized into 7 Gradle modules:
+The project follows Clean Architecture with MVI pattern, organized into 6 Gradle modules:
 
 | Module | Description |
 |--------|-------------|
@@ -37,10 +52,9 @@ The project follows Clean Architecture with MVI pattern, organized into 7 Gradle
 | `feature-auth` | Device Code authentication flow |
 | `feature-player` | Audio playback with DASH manifest support |
 | `feature-library` | Library browsing (albums, playlists, mixes) |
-| `feature-offline` | Offline downloads (planned) |
 | `feature-settings` | User settings and preferences |
 
-**Key technologies:** Kotlin 2.3, Jetpack Compose for Wear OS, Hilt, Retrofit, Media3, Room, DataStore
+**Key technologies:** Kotlin 2.3, Jetpack Compose for Wear OS, Hilt, Retrofit, Media3, DataStore
 
 ## Contributing
 

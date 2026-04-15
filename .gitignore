@@ -28,6 +28,7 @@ gradle.properties
 .gira/
 .claude/
 .omc/
+.serena/
 CLAUDE.md
 GEMINI.md
 AGENTS.md

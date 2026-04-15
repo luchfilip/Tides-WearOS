@@ -6,7 +6,7 @@ Thank you for your interest in contributing! This guide will help you get starte
 
 ### Prerequisites
 
-- Android Studio Ladybug or later
+- Latest stable Android Studio (Meerkat or newer recommended for Kotlin 2.3)
 - JDK 21
 - Android SDK with Wear OS system images
 - A Wear OS device or emulator
