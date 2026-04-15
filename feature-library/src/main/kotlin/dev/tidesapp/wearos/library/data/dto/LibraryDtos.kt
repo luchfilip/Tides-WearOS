@@ -10,7 +10,6 @@ import kotlinx.serialization.json.JsonElement
 // Each entry in /v2/my-collection/{type}/folders items[] is an envelope:
 // { trn, itemType: "ALBUM"|"PLAYLIST"|"FOLDER", addedAt, lastModifiedAt, name,
 //   parent, data: { ...full content object... } }
-// Confirmed on-device 2026-04-14 for both albums and playlists. See .docs/04-my-collection.md §1.3.
 @Serializable
 data class CollectionAlbumEntryDto(
     val itemType: String = "",
@@ -54,10 +53,10 @@ data class V1TrackListResponseDto(
 // =================================================================
 // v1 mix items DTO — /v1/mixes/{id}/items
 //
-// Confirmed on-device 2026-04-14: this endpoint wraps each track in a
-// `{ item: Track, type: "track" }` envelope, unlike /v1/playlists/{id}/tracks
-// which returns tracks directly under `items[]`. The inner `item` object has
-// the same shape as TrackDataDto, so we reuse that.
+// This endpoint wraps each track in a `{ item: Track, type: "track" }`
+// envelope, unlike /v1/playlists/{id}/tracks which returns tracks directly
+// under `items[]`. The inner `item` object has the same shape as TrackDataDto,
+// so we reuse that.
 // =================================================================
 
 @Serializable

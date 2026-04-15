@@ -8,8 +8,8 @@ import javax.inject.Named
 /**
  * Injects TIDAL client identity headers on every outgoing request.
  *
- * - `User-Agent: TIDAL_ANDROID_TV/<version> null` — matches TIDAL's actual UA pattern.
- *   The trailing ` null` is intentional and mirrors what the reference phone build emits.
+ * - `User-Agent: TIDAL_ANDROID_TV/<version> null` — the trailing ` null` is intentional
+ *   and kept for parity with the UA format the server expects.
  * - `x-tidal-client-version: <version>` — expected by server-side telemetry to correlate
  *   with the TV cid family.
  *

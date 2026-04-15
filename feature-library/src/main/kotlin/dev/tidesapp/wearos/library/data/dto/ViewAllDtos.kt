@@ -6,8 +6,6 @@ import kotlinx.serialization.Serializable
  * DTO for `GET v2/{viewAllPath}` — the generic "See all" endpoint driven by the
  * opaque `viewAll` relative URL carried on [HomeFeedV2ModuleDto].
  *
- * Ground-truth field documentation: `.docs/03-home-feed.md §4`.
- *
  * The response reuses the same polymorphic item envelope as the home feed modules
  * ([HomeFeedV2ItemEnvelopeDto]), so [HomeFeedV2Mapper] can share its item-decoding
  * logic. Every field defaults so partial server responses never throw.

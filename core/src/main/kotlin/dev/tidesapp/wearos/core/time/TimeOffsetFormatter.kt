@@ -10,7 +10,7 @@ import javax.inject.Singleton
  * Formats the pair of time-related values the v2 home feed endpoints require:
  *
  *  - `refreshId`: an integer epoch-millis timestamp that a client reuses for every
- *    home-related call in the same refresh cycle (.docs/03-home-feed.md §2.1).
+ *    home-related call in the same refresh cycle.
  *  - `timeOffset`: the device's current UTC offset as `±HH:MM` (e.g. `-04:00`,
  *    `+05:30`, `+00:00`). UTC is emitted as `+00:00`.
  *

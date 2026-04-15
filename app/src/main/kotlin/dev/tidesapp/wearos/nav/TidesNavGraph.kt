@@ -25,21 +25,6 @@ import dev.tidesapp.wearos.library.ui.tracks.TracksScreen
 import dev.tidesapp.wearos.library.ui.viewall.ViewAllScreen
 import dev.tidesapp.wearos.player.ui.nowplaying.NowPlayingScreen
 import dev.tidesapp.wearos.settings.ui.settings.SettingsScreen
-import kotlinx.serialization.Serializable
-
-// Type-safe route objects (kept for future Wear Compose Navigation type-safe support)
-@Serializable object LoginRoute
-@Serializable object LibraryHomeRoute
-@Serializable object LibraryHubRoute
-@Serializable object TracksRoute
-@Serializable object RecentRoute
-@Serializable data class AlbumDetailRoute(val albumId: String)
-@Serializable data class PlaylistDetailRoute(val playlistId: String)
-@Serializable data class MixDetailRoute(val mixId: String)
-@Serializable data class ViewAllRoute(val path: String, val title: String)
-@Serializable object SearchRoute
-@Serializable object NowPlayingRoute
-@Serializable object SettingsRoute
 
 object Routes {
     const val LOGIN = "login"

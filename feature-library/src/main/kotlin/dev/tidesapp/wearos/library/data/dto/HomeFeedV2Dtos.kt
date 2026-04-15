@@ -6,9 +6,6 @@ import kotlinx.serialization.json.JsonElement
 /**
  * DTOs for `GET v2/home/feed/STATIC` (phone-family endpoint).
  *
- * Ground-truth field documentation: `.docs/03-home-feed.md §2.2 – §2.5`.
- * Probe confirmation (TV device-code cid returning phone-variant body): `.docs/mobile-api-migration.md §10`.
- *
  * Design notes:
  * - The inner item `data` object is polymorphic across PLAYLIST/ALBUM/MIX/TRACK/ARTIST/DEEP_LINK.
  *   We deliberately do NOT use kotlinx.serialization class discriminators — they are strict and

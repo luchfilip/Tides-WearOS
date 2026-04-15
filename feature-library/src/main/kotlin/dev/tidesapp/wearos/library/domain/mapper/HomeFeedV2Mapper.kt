@@ -20,8 +20,6 @@ import javax.inject.Inject
  * Maps the `GET v2/home/feed/STATIC` response into the existing domain
  * [HomeFeedSection] / [HomeFeedItem] shapes.
  *
- * Ground-truth field docs: `.docs/03-home-feed.md §2.2 – §2.5`.
- *
  * Behaviour parity with v1 [HomeFeedMapper]:
  * - Modules with blank `title` are dropped.
  * - Modules whose items are all filtered out are dropped.
@@ -45,8 +43,6 @@ class HomeFeedV2Mapper @Inject constructor(
      * no per-section truncation: view-all is the destination that shows the full item list
      * (typically up to `limit=50`). Unsupported item kinds are dropped silently, same as
      * the home feed mapper.
-     *
-     * Ground-truth field documentation: `.docs/03-home-feed.md §4`.
      */
     fun mapViewAll(response: ViewAllResponseDto): ViewAllPage =
         ViewAllPage(
@@ -130,9 +126,9 @@ class HomeFeedV2Mapper @Inject constructor(
 
     private fun HomeFeedV2MixPayload.toDomain(): HomeFeedItem.Mix? {
         if (id.isBlank()) return null
-        // Real v2 MIX payloads carry the display text under titleTextInfo/subtitleTextInfo
-        // (see .docs/03-home-feed.md §2.5.2). Fall back to the flat title/subTitle fields for
-        // defensive parsing in case the server ever inlines them.
+        // Real MIX payloads carry the display text under titleTextInfo/subtitleTextInfo.
+        // Fall back to the flat title/subTitle fields for defensive parsing in case the
+        // server ever inlines them.
         val displayTitle = titleTextInfo?.text?.takeIf { it.isNotBlank() }
             ?: title.takeIf { it.isNotBlank() }
             ?: return null

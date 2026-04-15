@@ -32,7 +32,10 @@ CLAUDE.md
 GEMINI.md
 AGENTS.md
 
-# Captured traffic
+# Local/private reference docs
+.docs/
+
+# Local capture / media files
 *.chls
 *.mp4
 
