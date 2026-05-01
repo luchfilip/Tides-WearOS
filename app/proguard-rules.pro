@@ -1,2 +1,5 @@
 # Tidal WearOS ProGuard Rules
-# Placeholder - will be populated in TW-8
+
+# Ktor references JVM management classes not available on Android
+-dontwarn java.lang.management.ManagementFactory
+-dontwarn java.lang.management.RuntimeMXBean
