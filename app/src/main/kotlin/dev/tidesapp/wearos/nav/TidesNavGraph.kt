@@ -11,6 +11,7 @@ import androidx.navigation.navArgument
 import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
+import com.google.android.horologist.compose.layout.AppScaffold
 import com.flintsdk.Flint
 import dev.tidesapp.wearos.auth.ui.login.LoginScreen
 import dev.tidesapp.wearos.library.ui.albumdetail.AlbumDetailScreen
@@ -92,6 +93,7 @@ fun TidesNavGraph() {
         }
     }
 
+    AppScaffold {
     SwipeDismissableNavHost(
         navController = navController,
         startDestination = Routes.LOGIN,
@@ -334,6 +336,7 @@ fun TidesNavGraph() {
                 },
             )
         }
+    }
     }
 }
 

@@ -34,8 +34,8 @@ android {
         applicationId = "dev.tidesapp.wearos"
         minSdk = 26
         targetSdk = 34
-        versionCode = 7
-        versionName = "1.1.0"
+        versionCode = 8
+        versionName = "1.1.1"
 
         // Use findProperty(...) rather than property(...) so fresh clones without a
         // populated gradle.properties still build (the SDK will fail at runtime on
@@ -92,6 +92,12 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-opt-in=com.google.android.horologist.annotations.ExperimentalHorologistApi")
+    }
+}
+
 // Tidal SDK bundles its own media3 fork (com.tidal.androidx.media3).
 // Exclude the standard androidx.media3 to avoid duplicate classes.
 configurations.all {
@@ -115,6 +121,7 @@ dependencies {
     implementation(libs.wear.compose.material)
     implementation(libs.wear.compose.foundation)
     implementation(libs.wear.compose.navigation)
+    implementation(libs.horologist.compose.layout)
 
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

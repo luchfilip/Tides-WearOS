@@ -25,6 +25,7 @@ import androidx.wear.compose.material.Text
 import coil3.compose.AsyncImage
 import com.google.android.horologist.compose.layout.ScalingLazyColumn
 import com.google.android.horologist.compose.layout.ScalingLazyColumnDefaults
+import com.google.android.horologist.compose.layout.ScreenScaffold
 import com.google.android.horologist.compose.layout.rememberResponsiveColumnState
 import dev.tidesapp.wearos.core.domain.model.AlbumItem
 import dev.tidesapp.wearos.core.ui.components.ErrorScreen
@@ -139,6 +140,7 @@ private fun AlbumsList(
         ),
     )
 
+    ScreenScaffold(scrollState = columnState) {
     ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
         columnState = columnState,
@@ -157,6 +159,7 @@ private fun AlbumsList(
                 onClick = { onEvent(AlbumsUiEvent.AlbumClicked(album)) },
             )
         }
+    }
     }
 }
 

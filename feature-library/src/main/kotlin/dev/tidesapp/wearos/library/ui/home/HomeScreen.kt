@@ -24,6 +24,7 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.google.android.horologist.compose.layout.ScalingLazyColumn
 import com.google.android.horologist.compose.layout.ScalingLazyColumnDefaults
+import com.google.android.horologist.compose.layout.ScreenScaffold
 import com.google.android.horologist.compose.layout.rememberResponsiveColumnState
 import dev.tidesapp.wearos.core.domain.model.HomeFeedItem
 import dev.tidesapp.wearos.core.domain.model.HomeFeedSection
@@ -142,6 +143,7 @@ private fun HomeList(
         ),
     )
 
+    ScreenScaffold(scrollState = columnState) {
     ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
         columnState = columnState,
@@ -178,7 +180,7 @@ private fun HomeList(
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = 24.dp),
                     )
                 }
             }
@@ -226,5 +228,6 @@ private fun HomeList(
             }
         }
 
+    }
     }
 }

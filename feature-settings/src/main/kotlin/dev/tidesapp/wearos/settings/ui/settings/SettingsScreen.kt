@@ -17,7 +17,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.Chip
 import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.Icon
@@ -26,6 +25,10 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import androidx.wear.compose.material.ToggleChip
 import androidx.wear.compose.material.ToggleChipDefaults
+import com.google.android.horologist.compose.layout.ScalingLazyColumn
+import com.google.android.horologist.compose.layout.ScalingLazyColumnDefaults
+import com.google.android.horologist.compose.layout.ScreenScaffold
+import com.google.android.horologist.compose.layout.rememberResponsiveColumnState
 import com.flintsdk.Flint
 import com.flintsdk.semantics.flintContent
 import dev.tidesapp.wearos.core.domain.model.AudioQualityPreference
@@ -126,8 +129,17 @@ private fun LoadedContent(
     onEvent: (SettingsUiEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val columnState = rememberResponsiveColumnState(
+        contentPadding = ScalingLazyColumnDefaults.padding(
+            first = ScalingLazyColumnDefaults.ItemType.Text,
+            last = ScalingLazyColumnDefaults.ItemType.Chip,
+        ),
+    )
+
+    ScreenScaffold(scrollState = columnState) {
     ScalingLazyColumn(
         modifier = modifier.fillMaxSize(),
+        columnState = columnState,
     ) {
         item {
             ListHeader {
@@ -181,6 +193,7 @@ private fun LoadedContent(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+    }
     }
 }
 

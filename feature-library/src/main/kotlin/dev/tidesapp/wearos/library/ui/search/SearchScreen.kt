@@ -36,6 +36,7 @@ import androidx.wear.input.wearableExtender
 import coil3.compose.AsyncImage
 import com.google.android.horologist.compose.layout.ScalingLazyColumn
 import com.google.android.horologist.compose.layout.ScalingLazyColumnDefaults
+import com.google.android.horologist.compose.layout.ScreenScaffold
 import com.google.android.horologist.compose.layout.rememberResponsiveColumnState
 import dev.tidesapp.wearos.core.domain.model.AlbumItem
 import dev.tidesapp.wearos.core.domain.model.ArtistItem
@@ -187,6 +188,7 @@ fun SearchContent(
         ),
     )
 
+    ScreenScaffold(scrollState = columnState) {
     ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
         columnState = columnState,
@@ -299,6 +301,7 @@ fun SearchContent(
                 )
             }
         }
+    }
     }
 }
 

@@ -12,6 +12,7 @@ import androidx.wear.compose.material.ListHeader
 import androidx.wear.compose.material.Text
 import com.google.android.horologist.compose.layout.ScalingLazyColumn
 import com.google.android.horologist.compose.layout.ScalingLazyColumnDefaults
+import com.google.android.horologist.compose.layout.ScreenScaffold
 import com.google.android.horologist.compose.layout.rememberResponsiveColumnState
 import com.flintsdk.Flint
 import dev.tidesapp.wearos.core.ui.components.TidesChip
@@ -80,6 +81,7 @@ private fun LibraryHubContent(
         ),
     )
 
+    ScreenScaffold(scrollState = columnState) {
     when (uiState) {
         is LibraryHubUiState.Loaded -> {
             val contentItems = uiState.items.filter { it != LibraryItem.Settings }
@@ -115,5 +117,6 @@ private fun LibraryHubContent(
                 }
             }
         }
+    }
     }
 }

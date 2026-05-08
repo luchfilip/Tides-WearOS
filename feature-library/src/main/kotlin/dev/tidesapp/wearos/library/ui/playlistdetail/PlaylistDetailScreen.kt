@@ -21,6 +21,7 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.google.android.horologist.compose.layout.ScalingLazyColumn
 import com.google.android.horologist.compose.layout.ScalingLazyColumnDefaults
+import com.google.android.horologist.compose.layout.ScreenScaffold
 import com.google.android.horologist.compose.layout.rememberResponsiveColumnState
 import dev.tidesapp.wearos.core.domain.model.PlaylistItem
 import dev.tidesapp.wearos.core.domain.model.TrackItem
@@ -158,6 +159,7 @@ private fun PlaylistDetailBody(
         ),
     )
 
+    ScreenScaffold(scrollState = columnState) {
     ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
         columnState = columnState,
@@ -220,6 +222,7 @@ private fun PlaylistDetailBody(
                 onClick = { onEvent(PlaylistDetailUiEvent.PlayTrack(track)) },
             )
         }
+    }
     }
 }
 

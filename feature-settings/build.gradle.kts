@@ -23,6 +23,12 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-opt-in=com.google.android.horologist.annotations.ExperimentalHorologistApi")
+    }
+}
+
 dependencies {
     implementation(project(":core"))
     implementation(project(":feature-auth"))
@@ -34,6 +40,7 @@ dependencies {
 
     implementation(libs.wear.compose.material)
     implementation(libs.wear.compose.foundation)
+    implementation(libs.horologist.compose.layout)
 
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

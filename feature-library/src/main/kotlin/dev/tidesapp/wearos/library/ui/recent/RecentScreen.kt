@@ -20,6 +20,7 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.google.android.horologist.compose.layout.ScalingLazyColumn
 import com.google.android.horologist.compose.layout.ScalingLazyColumnDefaults
+import com.google.android.horologist.compose.layout.ScreenScaffold
 import com.google.android.horologist.compose.layout.rememberResponsiveColumnState
 import dev.tidesapp.wearos.core.domain.model.TrackItem
 import dev.tidesapp.wearos.core.ui.components.ErrorScreen
@@ -116,6 +117,7 @@ private fun RecentList(
         ),
     )
 
+    ScreenScaffold(scrollState = columnState) {
     ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
         columnState = columnState,
@@ -135,6 +137,7 @@ private fun RecentList(
                 onClick = { onEvent(RecentUiEvent.TrackClicked(index)) },
             )
         }
+    }
     }
 }
 

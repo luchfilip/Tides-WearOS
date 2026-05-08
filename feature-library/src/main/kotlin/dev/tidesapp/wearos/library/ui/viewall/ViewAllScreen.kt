@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -11,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -19,6 +21,7 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.google.android.horologist.compose.layout.ScalingLazyColumn
 import com.google.android.horologist.compose.layout.ScalingLazyColumnDefaults
+import com.google.android.horologist.compose.layout.ScreenScaffold
 import com.google.android.horologist.compose.layout.rememberResponsiveColumnState
 import dev.tidesapp.wearos.core.domain.model.HomeFeedItem
 import dev.tidesapp.wearos.core.domain.model.ViewAllPage
@@ -128,6 +131,7 @@ private fun ViewAllList(
         ),
     )
 
+    ScreenScaffold(scrollState = columnState) {
     ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
         columnState = columnState,
@@ -138,6 +142,10 @@ private fun ViewAllList(
                 style = MaterialTheme.typography.title2,
                 color = MaterialTheme.colors.primary,
                 maxLines = 2,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                textAlign = TextAlign.Center,
             )
         }
         val subtitle = page.subtitle
@@ -147,6 +155,10 @@ private fun ViewAllList(
                     text = subtitle,
                     style = MaterialTheme.typography.body2,
                     color = MaterialTheme.colors.onSurfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                    textAlign = TextAlign.Center,
                 )
             }
         }
@@ -163,6 +175,7 @@ private fun ViewAllList(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+    }
     }
 }
 
