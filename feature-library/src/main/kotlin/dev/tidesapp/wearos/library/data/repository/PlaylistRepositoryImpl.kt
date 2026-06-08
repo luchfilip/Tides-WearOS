@@ -5,7 +5,6 @@ import dev.tidesapp.wearos.core.domain.model.PlaylistItem
 import dev.tidesapp.wearos.core.domain.model.TrackItem
 import dev.tidesapp.wearos.library.data.api.TidesLibraryApi
 import dev.tidesapp.wearos.library.data.dto.CollectionPlaylistEntryDto
-import dev.tidesapp.wearos.library.data.dto.TrackDataDto
 import dev.tidesapp.wearos.library.domain.mapper.toDomain
 import dev.tidesapp.wearos.library.domain.repository.PlaylistRepository
 import kotlinx.coroutines.sync.Mutex
@@ -69,19 +68,14 @@ class PlaylistRepositoryImpl @Inject constructor(
     override suspend fun getPlaylistTracks(id: String): Result<List<TrackItem>> {
         return try {
             val token = getBearerToken().getOrElse { return Result.failure(it) }
-            val tracks = mutableListOf<TrackDataDto>()
-            var offset = 0
-            while (true) {
-                val response = api.getPlaylistTracks(
-                    token = token,
-                    playlistId = id,
-                    offset = offset,
-                    limit = PAGE_SIZE,
-                )
-                if (response.items.isEmpty()) break
-                tracks += response.items
-                offset += PAGE_SIZE
-                if (tracks.size >= response.totalNumberOfItems) break
+
+            // First page tells us the total; fetch the rest by iterating the
+            // remaining offsets.
+            val firstPage = api.getPlaylistTracks(token, id, offset = 0, limit = PAGE_SIZE)
+            val tracks = firstPage.items.toMutableList()
+            for (offset in PAGE_SIZE until firstPage.totalNumberOfItems step PAGE_SIZE) {
+                val page = api.getPlaylistTracks(token, id, offset = offset, limit = PAGE_SIZE)
+                tracks += page.items
             }
             Result.success(tracks.map { it.toDomain() })
         } catch (e: Exception) {

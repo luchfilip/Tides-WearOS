@@ -175,18 +175,18 @@ class PlaylistRepositoryImplTest {
     }
 
     @Test
-    fun `getPlaylistTracks stops on empty page`() = runTest {
+    fun `getPlaylistTracks fetches no extra page when total is an exact multiple of page size`() = runTest {
         coEvery {
             api.getPlaylistTracks(token = any(), playlistId = any(), offset = 0, limit = any())
-        } returns createTracksResponse(offset = 0, count = 50, total = 500)
+        } returns createTracksResponse(offset = 0, count = 50, total = 100)
         coEvery {
             api.getPlaylistTracks(token = any(), playlistId = any(), offset = 50, limit = any())
-        } returns createTracksResponse(offset = 50, count = 0, total = 500)
+        } returns createTracksResponse(offset = 50, count = 50, total = 100)
 
         val result = repository.getPlaylistTracks("playlist-1")
 
         assertTrue(result.isSuccess)
-        assertEquals(50, result.getOrNull()?.size)
+        assertEquals(100, result.getOrNull()?.size)
         coVerify(exactly = 1) {
             api.getPlaylistTracks(token = any(), playlistId = any(), offset = 50, limit = any())
         }
