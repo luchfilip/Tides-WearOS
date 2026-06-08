@@ -4,6 +4,7 @@ import com.tidal.sdk.auth.CredentialsProvider
 import dev.tidesapp.wearos.core.domain.model.AlbumItem
 import dev.tidesapp.wearos.core.domain.model.TrackItem
 import dev.tidesapp.wearos.library.data.api.TidesLibraryApi
+import dev.tidesapp.wearos.library.data.dto.CollectionAlbumEntryDto
 import dev.tidesapp.wearos.library.domain.mapper.toDomain
 import dev.tidesapp.wearos.library.domain.repository.AlbumRepository
 import kotlinx.coroutines.sync.Mutex
@@ -36,8 +37,14 @@ class AlbumRepositoryImpl @Inject constructor(
 
             try {
                 val token = getBearerToken().getOrElse { return@withLock Result.failure(it) }
-                val response = api.getUserAlbums(token = token)
-                val albums = response.items
+                val entries = mutableListOf<CollectionAlbumEntryDto>()
+                var cursor = ""
+                do {
+                    val response = api.getUserAlbums(token = token, cursor = cursor)
+                    entries += response.items
+                    cursor = response.cursor.orEmpty()
+                } while (cursor.isNotBlank())
+                val albums = entries
                     .filter { it.itemType == "ALBUM" }
                     .mapNotNull { it.data?.toDomain() }
                 cachedAlbums = albums
