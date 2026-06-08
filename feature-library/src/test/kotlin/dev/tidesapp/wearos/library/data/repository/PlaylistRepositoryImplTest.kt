@@ -129,8 +129,140 @@ class PlaylistRepositoryImplTest {
         assertEquals("Track 1", result.getOrNull()?.first()?.title)
     }
 
-    private fun createPlaylistsResponse(count: Int) = CollectionPlaylistsResponseDto(
-        items = List(count) { index ->
+    @Test
+    fun `getPlaylistTracks paginates until all tracks fetched`() = runTest {
+        coEvery {
+            api.getPlaylistTracks(token = any(), playlistId = any(), offset = 0, limit = any())
+        } returns createTracksResponse(offset = 0, count = 50, total = 120)
+        coEvery {
+            api.getPlaylistTracks(token = any(), playlistId = any(), offset = 50, limit = any())
+        } returns createTracksResponse(offset = 50, count = 50, total = 120)
+        coEvery {
+            api.getPlaylistTracks(token = any(), playlistId = any(), offset = 100, limit = any())
+        } returns createTracksResponse(offset = 100, count = 20, total = 120)
+
+        val result = repository.getPlaylistTracks("playlist-1")
+
+        assertTrue(result.isSuccess)
+        assertEquals(120, result.getOrNull()?.size)
+        coVerify(exactly = 1) {
+            api.getPlaylistTracks(token = any(), playlistId = any(), offset = 0, limit = any())
+        }
+        coVerify(exactly = 1) {
+            api.getPlaylistTracks(token = any(), playlistId = any(), offset = 50, limit = any())
+        }
+        coVerify(exactly = 1) {
+            api.getPlaylistTracks(token = any(), playlistId = any(), offset = 100, limit = any())
+        }
+    }
+
+    @Test
+    fun `getPlaylistTracks fetches single page when total is at or below 50`() = runTest {
+        coEvery {
+            api.getPlaylistTracks(token = any(), playlistId = any(), offset = 0, limit = any())
+        } returns createTracksResponse(offset = 0, count = 10, total = 10)
+
+        val result = repository.getPlaylistTracks("playlist-1")
+
+        assertTrue(result.isSuccess)
+        assertEquals(10, result.getOrNull()?.size)
+        coVerify(exactly = 1) {
+            api.getPlaylistTracks(token = any(), playlistId = any(), offset = 0, limit = any())
+        }
+        coVerify(exactly = 0) {
+            api.getPlaylistTracks(token = any(), playlistId = any(), offset = 50, limit = any())
+        }
+    }
+
+    @Test
+    fun `getPlaylistTracks fetches no extra page when total is an exact multiple of page size`() = runTest {
+        coEvery {
+            api.getPlaylistTracks(token = any(), playlistId = any(), offset = 0, limit = any())
+        } returns createTracksResponse(offset = 0, count = 50, total = 100)
+        coEvery {
+            api.getPlaylistTracks(token = any(), playlistId = any(), offset = 50, limit = any())
+        } returns createTracksResponse(offset = 50, count = 50, total = 100)
+
+        val result = repository.getPlaylistTracks("playlist-1")
+
+        assertTrue(result.isSuccess)
+        assertEquals(100, result.getOrNull()?.size)
+        coVerify(exactly = 1) {
+            api.getPlaylistTracks(token = any(), playlistId = any(), offset = 50, limit = any())
+        }
+        coVerify(exactly = 0) {
+            api.getPlaylistTracks(token = any(), playlistId = any(), offset = 100, limit = any())
+        }
+    }
+
+    @Test
+    fun `getUserPlaylists follows cursor across pages`() = runTest {
+        coEvery {
+            api.getUserPlaylists(token = any(), cursor = "")
+        } returns createPlaylistsResponse(50, startIndex = 0, cursor = "c1")
+        coEvery {
+            api.getUserPlaylists(token = any(), cursor = "c1")
+        } returns createPlaylistsResponse(50, startIndex = 50, cursor = "c2")
+        coEvery {
+            api.getUserPlaylists(token = any(), cursor = "c2")
+        } returns createPlaylistsResponse(10, startIndex = 100, cursor = null)
+
+        val result = repository.getUserPlaylists()
+
+        assertTrue(result.isSuccess)
+        assertEquals(110, result.getOrNull()?.size)
+        coVerify(exactly = 1) { api.getUserPlaylists(token = any(), cursor = "") }
+        coVerify(exactly = 1) { api.getUserPlaylists(token = any(), cursor = "c1") }
+        coVerify(exactly = 1) { api.getUserPlaylists(token = any(), cursor = "c2") }
+    }
+
+    @Test
+    fun `getUserPlaylists includes emoji-only titled playlist`() = runTest {
+        val emojiResponse = CollectionPlaylistsResponseDto(
+            items = listOf(
+                CollectionPlaylistEntryDto(
+                    itemType = "PLAYLIST",
+                    data = PlaylistDataDto(
+                        uuid = "playlist-emoji",
+                        title = "😀🎵🔥",
+                        creator = PlaylistCreatorDto(name = "User"),
+                    ),
+                ),
+            ),
+            totalNumberOfItems = 1,
+            cursor = null,
+        )
+        coEvery { api.getUserPlaylists(any()) } returns emojiResponse
+
+        val result = repository.getUserPlaylists()
+
+        assertTrue(result.isSuccess)
+        assertEquals(1, result.getOrNull()?.size)
+        assertEquals("😀🎵🔥", result.getOrNull()?.first()?.title)
+    }
+
+    private fun createTracksResponse(offset: Int, count: Int, total: Int) = V1TrackListResponseDto(
+        limit = 50,
+        offset = offset,
+        totalNumberOfItems = total,
+        items = List(count) { i ->
+            TrackDataDto(
+                id = (offset + i).toLong(),
+                title = "Track ${offset + i}",
+                duration = 180,
+                trackNumber = offset + i,
+                artist = ArtistBriefDto(id = 1, name = "Artist"),
+            )
+        },
+    )
+
+    private fun createPlaylistsResponse(
+        count: Int,
+        startIndex: Int = 0,
+        cursor: String? = null,
+    ) = CollectionPlaylistsResponseDto(
+        items = List(count) { i ->
+            val index = startIndex + i
             CollectionPlaylistEntryDto(
                 itemType = "PLAYLIST",
                 data = PlaylistDataDto(
@@ -144,5 +276,6 @@ class PlaylistRepositoryImplTest {
             )
         },
         totalNumberOfItems = count,
+        cursor = cursor,
     )
 }

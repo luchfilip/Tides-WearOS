@@ -105,6 +105,36 @@ class AlbumRepositoryImplTest {
     }
 
     @Test
+    fun `getUserAlbums follows cursor across pages`() = runTest {
+        val page1 = createCollectionResponse(50, cursor = "c1")
+        val page2 = createCollectionResponse(50, cursor = "c2")
+        val page3 = createCollectionResponse(7, cursor = null)
+        coEvery { api.getUserAlbums(token = any(), cursor = "") } returns page1
+        coEvery { api.getUserAlbums(token = any(), cursor = "c1") } returns page2
+        coEvery { api.getUserAlbums(token = any(), cursor = "c2") } returns page3
+
+        val result = repository.getUserAlbums()
+
+        assertTrue(result.isSuccess)
+        assertEquals(107, result.getOrNull()?.size)
+        coVerify(exactly = 1) { api.getUserAlbums(token = any(), cursor = "") }
+        coVerify(exactly = 1) { api.getUserAlbums(token = any(), cursor = "c1") }
+        coVerify(exactly = 1) { api.getUserAlbums(token = any(), cursor = "c2") }
+    }
+
+    @Test
+    fun `getUserAlbums fetches single page when cursor null`() = runTest {
+        val response = createCollectionResponse(10, cursor = null)
+        coEvery { api.getUserAlbums(token = any(), cursor = any()) } returns response
+
+        val result = repository.getUserAlbums()
+
+        assertTrue(result.isSuccess)
+        assertEquals(10, result.getOrNull()?.size)
+        coVerify(exactly = 1) { api.getUserAlbums(token = any(), cursor = any()) }
+    }
+
+    @Test
     fun `getAlbumDetail returns album successfully`() = runTest {
         val response = AlbumDataDto(
             id = 123,
@@ -143,7 +173,7 @@ class AlbumRepositoryImplTest {
         assertEquals("Track 1", result.getOrNull()?.first()?.title)
     }
 
-    private fun createCollectionResponse(count: Int) = CollectionAlbumsResponseDto(
+    private fun createCollectionResponse(count: Int, cursor: String? = null) = CollectionAlbumsResponseDto(
         items = List(count) { index ->
             CollectionAlbumEntryDto(
                 itemType = "ALBUM",
@@ -158,6 +188,7 @@ class AlbumRepositoryImplTest {
             )
         },
         totalNumberOfItems = count,
+        cursor = cursor,
     )
 
     private fun createTrackData(id: Long, title: String, trackNumber: Int) = TrackDataDto(

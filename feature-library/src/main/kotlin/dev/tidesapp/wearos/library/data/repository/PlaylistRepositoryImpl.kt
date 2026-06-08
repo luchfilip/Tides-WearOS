@@ -4,6 +4,7 @@ import com.tidal.sdk.auth.CredentialsProvider
 import dev.tidesapp.wearos.core.domain.model.PlaylistItem
 import dev.tidesapp.wearos.core.domain.model.TrackItem
 import dev.tidesapp.wearos.library.data.api.TidesLibraryApi
+import dev.tidesapp.wearos.library.data.dto.CollectionPlaylistEntryDto
 import dev.tidesapp.wearos.library.domain.mapper.toDomain
 import dev.tidesapp.wearos.library.domain.repository.PlaylistRepository
 import kotlinx.coroutines.sync.Mutex
@@ -36,8 +37,14 @@ class PlaylistRepositoryImpl @Inject constructor(
 
             try {
                 val token = getBearerToken().getOrElse { return@withLock Result.failure(it) }
-                val response = api.getUserPlaylists(token = token)
-                val playlists = response.items
+                val entries = mutableListOf<CollectionPlaylistEntryDto>()
+                var cursor = ""
+                do {
+                    val response = api.getUserPlaylists(token = token, cursor = cursor)
+                    entries += response.items
+                    cursor = response.cursor.orEmpty()
+                } while (cursor.isNotBlank())
+                val playlists = entries
                     .filter { it.itemType == "PLAYLIST" }
                     .mapNotNull { it.data?.toDomain() }
                 cachedPlaylists = playlists
@@ -61,10 +68,22 @@ class PlaylistRepositoryImpl @Inject constructor(
     override suspend fun getPlaylistTracks(id: String): Result<List<TrackItem>> {
         return try {
             val token = getBearerToken().getOrElse { return Result.failure(it) }
-            val response = api.getPlaylistTracks(token = token, playlistId = id)
-            Result.success(response.items.map { it.toDomain() })
+
+            // First page tells us the total; fetch the rest by iterating the
+            // remaining offsets.
+            val firstPage = api.getPlaylistTracks(token, id, offset = 0, limit = PAGE_SIZE)
+            val tracks = firstPage.items.toMutableList()
+            for (offset in PAGE_SIZE until firstPage.totalNumberOfItems step PAGE_SIZE) {
+                val page = api.getPlaylistTracks(token, id, offset = offset, limit = PAGE_SIZE)
+                tracks += page.items
+            }
+            Result.success(tracks.map { it.toDomain() })
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    private companion object {
+        const val PAGE_SIZE = 50
     }
 }
