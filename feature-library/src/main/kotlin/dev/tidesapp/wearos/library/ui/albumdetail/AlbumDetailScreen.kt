@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -11,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -174,6 +176,10 @@ private fun AlbumDetailBody(
                 style = MaterialTheme.typography.title2,
                 color = MaterialTheme.colors.primary,
                 maxLines = 2,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                textAlign = TextAlign.Center,
             )
         }
         item {
@@ -181,6 +187,10 @@ private fun AlbumDetailBody(
                 text = album.artistName,
                 style = MaterialTheme.typography.body2,
                 color = MaterialTheme.colors.onSurfaceVariant,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                textAlign = TextAlign.Center,
             )
         }
         item {
